@@ -5,6 +5,7 @@ SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="${SCRIPT_DIR:h}"
 BUILD_ROOT="$PROJECT_ROOT/build"
 TEMP_ROOT="$(mktemp -d /private/tmp/codex-pulse-build.XXXXXX)"
+trap '/bin/rm -rf "$TEMP_ROOT"' EXIT
 APP_NAME="Codex Pulse.app"
 STAGED_APP="$TEMP_ROOT/$APP_NAME"
 CONTENTS="$STAGED_APP/Contents"
@@ -45,18 +46,10 @@ clang -fobjc-arc -O2 -fmodules-cache-path="$MODULE_CACHE" \
 codesign --force --deep --sign - "$STAGED_APP"
 codesign --verify --deep --strict "$STAGED_APP"
 
-TARGET_APP="$BUILD_ROOT/$APP_NAME"
-if [[ -e "$TARGET_APP" ]]; then
-  BACKUP_NAME="Codex Pulse.previous.$(date +%Y%m%d-%H%M%S).app"
-  mv "$TARGET_APP" "$BUILD_ROOT/$BACKUP_NAME"
-fi
-ditto "$STAGED_APP" "$TARGET_APP"
-
 TARGET_ZIP="$BUILD_ROOT/Codex-Pulse.zip"
 if [[ -e "$TARGET_ZIP" ]]; then
-  mv "$TARGET_ZIP" "$BUILD_ROOT/Codex-Pulse.previous.$(date +%Y%m%d-%H%M%S).zip"
+  /bin/rm -f "$TARGET_ZIP"
 fi
 ditto -c -k --sequesterRsrc --keepParent "$STAGED_APP" "$TARGET_ZIP"
 
-echo "$TARGET_APP"
 echo "$TARGET_ZIP"
