@@ -1,6 +1,6 @@
 # Codex Pulse installation
 
-1. Unzip `Codex Pulse.zip`. The archive is the canonical signed deliverable.
+1. Unzip `Codex-Pulse.zip`. The archive is the canonical signed deliverable.
 2. Drag **Codex Pulse.app** into your Applications folder, or run it directly from the delivered folder.
 3. If macOS asks for confirmation because the app is ad-hoc signed, Control-click the app, choose **Open**, then confirm.
 4. Codex Pulse appears in both the Dock and the menu bar. Closing the dashboard leaves the tracker active.
@@ -10,7 +10,7 @@ Move the dashboard by dragging its Codex Pulse header at the top of the window. 
 
 The menu-bar percentage and dashboard weekly-limit card show the percentage remaining. The three usage rows in the menu are clickable and open the full dashboard.
 
-Codex Pulse checks for signed updates after launch. You can also choose **Check for Updates…** from the menu-bar menu. Beginning with version 1.4, updates download, verify, install, and relaunch directly from the app.
+Codex Pulse checks for signed updates after launch. You can also choose **Check for Updates…** from the menu-bar menu. Beginning with version 1.4.1, updates download, verify, install, and relaunch directly from the app.
 
 On first launch, Codex Pulse imports eligible local token events from the preceding seven days. It then retains that seed plus new local Codex Desktop and CLI usage.
 

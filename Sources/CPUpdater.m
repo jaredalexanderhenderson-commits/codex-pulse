@@ -82,7 +82,9 @@ static NSString *const CPReleaseAPIURL = @"https://api.github.com/repos/jaredale
     NSDictionary *archiveAsset = nil;
     for (NSDictionary *asset in release[@"assets"]) {
         NSString *name = asset[@"name"];
-        if ([name isEqualToString:@"Codex-Pulse.zip"] || [name isEqualToString:@"Codex Pulse.zip"]) {
+        if ([name isEqualToString:@"Codex-Pulse.zip"] ||
+            [name isEqualToString:@"Codex Pulse.zip"] ||
+            [name isEqualToString:@"Codex.Pulse.zip"]) {
             archiveAsset = asset;
             break;
         }

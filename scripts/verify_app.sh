@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="${SCRIPT_DIR:h}"
-ZIP="$PROJECT_ROOT/build/Codex Pulse.zip"
+ZIP="$PROJECT_ROOT/build/Codex-Pulse.zip"
 VERIFY_ROOT="$(mktemp -d /private/tmp/codex-pulse-verify.XXXXXX)"
 
 ditto -x -k "$ZIP" "$VERIFY_ROOT"

@@ -52,9 +52,9 @@ if [[ -e "$TARGET_APP" ]]; then
 fi
 ditto "$STAGED_APP" "$TARGET_APP"
 
-TARGET_ZIP="$BUILD_ROOT/Codex Pulse.zip"
+TARGET_ZIP="$BUILD_ROOT/Codex-Pulse.zip"
 if [[ -e "$TARGET_ZIP" ]]; then
-  mv "$TARGET_ZIP" "$BUILD_ROOT/Codex Pulse.previous.$(date +%Y%m%d-%H%M%S).zip"
+  mv "$TARGET_ZIP" "$BUILD_ROOT/Codex-Pulse.previous.$(date +%Y%m%d-%H%M%S).zip"
 fi
 ditto -c -k --sequesterRsrc --keepParent "$STAGED_APP" "$TARGET_ZIP"
 
