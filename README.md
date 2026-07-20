@@ -19,6 +19,10 @@ make package
 
 The native shell uses AppKit and WebKit. The dashboard is bundled HTML/CSS/JavaScript and makes no network requests.
 
+## Updates
+
+Codex Pulse checks the repository's latest public GitHub release shortly after launch. The menu-bar menu also includes **Check for Updates…**. Update archives are accepted only when the GitHub-provided SHA-256 digest, bundle identifier, version, and macOS code signature all verify. The app then replaces its existing bundle and relaunches itself.
+
 ## Accounting
 
 - `total = input + output`

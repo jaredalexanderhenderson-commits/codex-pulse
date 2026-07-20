@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #import "CPLogCollector.h"
 #import "CPPricingEngine.h"
+#import "CPUpdater.h"
 
 static int failures = 0;
 
@@ -46,6 +47,10 @@ int main(int argc, const char *argv[]) {
         NSError *error = nil;
         CPPricingEngine *pricing = [[CPPricingEngine alloc] initWithPricingFileURL:pricingURL error:&error];
         Assert(pricing != nil && error == nil, @"Pricing table loads");
+        Assert([CPUpdater isVersion:@"1.4" newerThanVersion:@"1.3"], @"Updater recognizes a newer minor version");
+        Assert([CPUpdater isVersion:@"1.10" newerThanVersion:@"1.9"], @"Updater compares numeric version components");
+        Assert(![CPUpdater isVersion:@"1.4" newerThanVersion:@"1.4"], @"Updater ignores the installed version");
+        Assert(![CPUpdater isVersion:@"1.3.9" newerThanVersion:@"1.4"], @"Updater rejects an older version");
 
         NSDictionary *estimate = [pricing estimateForModel:@"gpt-5.6-sol"
                                                serviceTier:@"standard"

@@ -10,6 +10,8 @@ Move the dashboard by dragging its Codex Pulse header at the top of the window. 
 
 The menu-bar percentage and dashboard weekly-limit card show the percentage remaining. The three usage rows in the menu are clickable and open the full dashboard.
 
+Codex Pulse checks for signed updates after launch. You can also choose **Check for Updates…** from the menu-bar menu. Beginning with version 1.4, updates download, verify, install, and relaunch directly from the app.
+
 On first launch, Codex Pulse imports eligible local token events from the preceding seven days. It then retains that seed plus new local Codex Desktop and CLI usage.
 
 The app reads `~/.codex/sessions` and `~/.codex/archived_sessions`. It does not modify those directories and does not retain prompts, responses, tool output, or reasoning text.

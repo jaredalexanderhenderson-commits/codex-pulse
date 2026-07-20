@@ -15,7 +15,8 @@ clang \
   "$PROJECT_ROOT/Tests/TestRunner.m" \
   "$PROJECT_ROOT/Sources/CPLogCollector.m" \
   "$PROJECT_ROOT/Sources/CPPricingEngine.m" \
-  -framework Foundation \
+  "$PROJECT_ROOT/Sources/CPUpdater.m" \
+  -framework Foundation -framework AppKit \
   -o "$TEST_ROOT/TestRunner"
 
 "$TEST_ROOT/TestRunner" "$PROJECT_ROOT/Tests/Fixtures" "$PROJECT_ROOT/Resources/pricing.json"

@@ -2,6 +2,7 @@
 #import "CPFileWatcher.h"
 #import "CPLogCollector.h"
 #import "CPPricingEngine.h"
+#import "CPUpdater.h"
 
 static double CPAppDouble(id value) {
     return [value respondsToSelector:@selector(doubleValue)] ? [value doubleValue] : 0.0;
@@ -34,6 +35,7 @@ static double CPAppDouble(id value) {
 @property (nonatomic, strong) NSDictionary *latestSnapshot;
 @property (nonatomic, strong) NSURL *dataDirectoryURL;
 @property (nonatomic, assign) BOOL webViewReady;
+@property (nonatomic, strong) CPUpdater *updater;
 @end
 
 @implementation AppDelegate
@@ -43,6 +45,7 @@ static double CPAppDouble(id value) {
     // status item continues to provide the compact menu-bar experience.
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [self configureCollector];
+    self.updater = [CPUpdater new];
     [self configureStatusItem];
     [self showDashboard:nil];
 
@@ -58,6 +61,10 @@ static double CPAppDouble(id value) {
         }];
     }];
     [self.watcher start];
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [weakSelf.updater checkForUpdatesUserInitiated:NO];
+    });
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
@@ -135,6 +142,9 @@ static double CPAppDouble(id value) {
     NSMenuItem *refreshItem = [[NSMenuItem alloc] initWithTitle:@"Refresh Now" action:@selector(refreshNow:) keyEquivalent:@"r"];
     refreshItem.target = self;
     [menu addItem:refreshItem];
+    NSMenuItem *updateItem = [[NSMenuItem alloc] initWithTitle:@"Check for Updates…" action:@selector(checkForUpdates:) keyEquivalent:@""];
+    updateItem.target = self;
+    [menu addItem:updateItem];
     NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit Codex Pulse" action:@selector(quitApp:) keyEquivalent:@"q"];
     quitItem.target = self;
     [menu addItem:quitItem];
@@ -204,6 +214,10 @@ static double CPAppDouble(id value) {
 
 - (void)quitApp:(id)sender {
     [NSApp terminate:nil];
+}
+
+- (void)checkForUpdates:(id)sender {
+    [self.updater checkForUpdatesUserInitiated:YES];
 }
 
 - (void)consumeSnapshot:(NSDictionary *)snapshot {

@@ -24,6 +24,7 @@ clang \
   "$PROJECT_ROOT/Sources/CPFileWatcher.m" \
   "$PROJECT_ROOT/Sources/CPLogCollector.m" \
   "$PROJECT_ROOT/Sources/CPPricingEngine.m" \
+  "$PROJECT_ROOT/Sources/CPUpdater.m" \
   -framework AppKit -framework WebKit -framework CoreServices \
   -o "$MACOS_DIR/CodexPulse"
 
@@ -32,6 +33,8 @@ cp "$PROJECT_ROOT/Resources/dashboard.html" "$RESOURCES_DIR/dashboard.html"
 cp "$PROJECT_ROOT/Resources/dashboard.css" "$RESOURCES_DIR/dashboard.css"
 cp "$PROJECT_ROOT/Resources/dashboard.js" "$RESOURCES_DIR/dashboard.js"
 cp "$PROJECT_ROOT/Resources/pricing.json" "$RESOURCES_DIR/pricing.json"
+cp "$PROJECT_ROOT/Resources/install_update.sh" "$RESOURCES_DIR/install_update.sh"
+chmod +x "$RESOURCES_DIR/install_update.sh"
 
 ICONSET="$TEMP_ROOT/AppIcon.iconset"
 mkdir -p "$ICONSET"
