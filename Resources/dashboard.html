@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Codex Pulse</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="aurora aurora-one"></div>
+  <div class="aurora aurora-two"></div>
+  <div class="noise"></div>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">
+          <span class="brand-core"></span>
+          <span class="brand-orbit"></span>
+        </div>
+        <div>
+          <div class="eyebrow">LOCAL CODEX TELEMETRY</div>
+          <h1>Codex <span>Pulse</span></h1>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="live-pill" title="Watching local Codex session files">
+          <span class="live-dot"></span>
+          <span>LIVE</span>
+          <small id="last-updated">waiting for data</small>
+        </div>
+        <button class="icon-button" id="refresh-button" aria-label="Refresh now" title="Refresh now">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9m0 0V4m0 5h5M4 13a8.1 8.1 0 0 0 14.9 4l2.1-2m0 0v5m0-5h-5"/></svg>
+        </button>
+        <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="period-row" aria-label="Reporting period">
+      <div class="segmented-control" id="period-control">
+        <button data-period="tracked" class="active">Since tracking</button>
+        <button data-period="week">Last 7 days</button>
+        <button data-period="today">Today</button>
+      </div>
+      <div class="tracking-since">Tracking since <strong id="tracking-start">—</strong></div>
+    </section>
+
+    <section class="headline-grid" aria-label="Headline usage metrics">
+      <article class="metric-card token-card">
+        <div class="card-glow"></div>
+        <div class="metric-header">
+          <div>
+            <div class="metric-label">RAW TOKENS</div>
+            <div class="metric-value" id="total-tokens">—</div>
+          </div>
+          <div class="metric-icon violet">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7.5 12 3l7 4.5v9L12 21l-7-4.5v-9Z"/><path d="m5 7.5 7 4.5 7-4.5M12 12v9"/></svg>
+          </div>
+        </div>
+        <div class="metric-caption"><span id="token-sessions">—</span> local sessions · <span id="token-events">—</span> model calls</div>
+        <div class="micro-grid">
+          <div><span>Input</span><strong id="input-tokens">—</strong></div>
+          <div><span>Cached</span><strong id="cached-tokens">—</strong></div>
+          <div><span>Output</span><strong id="output-tokens">—</strong></div>
+        </div>
+      </article>
+
+      <article class="metric-card credit-card">
+        <div class="card-glow"></div>
+        <div class="metric-header">
+          <div>
+            <div class="metric-label">ESTIMATED CREDITS</div>
+            <div class="metric-value" id="estimated-credits">—</div>
+          </div>
+          <div class="metric-icon magenta">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-.8-.7-1.8-1-3-1-1.8 0-3 .8-3 2 0 3 6 1 6 4 0 1.2-1.2 2-3 2-1.2 0-2.4-.4-3.2-1.2M12 5.5v13"/></svg>
+          </div>
+        </div>
+        <div class="cost-line"><strong id="api-cost">—</strong> <span>API equivalent</span></div>
+        <div class="metric-caption" id="pricing-caption">Based on the current token rate card</div>
+        <div class="coverage-row">
+          <span>Priced-token coverage</span>
+          <strong id="pricing-coverage">—</strong>
+        </div>
+        <div class="thin-track"><span id="coverage-bar"></span></div>
+      </article>
+
+      <article class="metric-card limit-card">
+        <div class="card-glow"></div>
+        <div class="limit-layout">
+          <div>
+            <div class="metric-label">WEEKLY LIMIT</div>
+            <div class="metric-value" id="limit-percent">—</div>
+            <div class="metric-caption" id="limit-plan">Waiting for Codex</div>
+          </div>
+          <div class="limit-ring" id="limit-ring" style="--limit:0">
+            <div class="limit-ring-inner">
+              <span id="limit-ring-number">—</span>
+              <small>REMAINING</small>
+            </div>
+          </div>
+        </div>
+        <div class="reset-box">
+          <span>Resets</span>
+          <strong id="reset-countdown">—</strong>
+          <small id="reset-date">—</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="insight-grid">
+      <article class="panel trend-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">VELOCITY</div>
+            <h2>Seven-day token flow</h2>
+          </div>
+          <div class="legend"><span class="legend-dot"></span> Raw tokens</div>
+        </div>
+        <div class="chart-wrap">
+          <svg id="trend-chart" viewBox="0 0 720 238" preserveAspectRatio="none" aria-label="Seven-day token chart"></svg>
+          <div class="chart-labels" id="chart-labels"></div>
+        </div>
+      </article>
+
+      <article class="panel composition-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">COMPOSITION</div>
+            <h2>What the context costs</h2>
+          </div>
+        </div>
+        <div id="composition-bars" class="composition-bars"></div>
+        <div class="cache-callout">
+          <div class="cache-glyph">↯</div>
+          <div><span>Cache efficiency</span><strong id="cache-efficiency">—</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="lower-grid">
+      <article class="panel models-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">MODEL MIX</div>
+            <h2>Where the tokens went</h2>
+          </div>
+        </div>
+        <div id="model-list" class="model-list"></div>
+      </article>
+
+      <article class="panel sessions-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">RECENT ACTIVITY</div>
+            <h2>Local Codex sessions</h2>
+          </div>
+          <span class="privacy-chip">metadata only</span>
+        </div>
+        <div id="session-list" class="session-list"></div>
+      </article>
+    </section>
+
+    <footer>
+      <span><i></i> Reading local Codex telemetry only. Prompts and responses are not retained.</span>
+      <span id="health-summary">Initializing collector…</span>
+    </footer>
+  </main>
+
+  <aside class="settings-drawer" id="settings-drawer" aria-hidden="true">
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <div class="drawer-panel">
+      <div class="drawer-header">
+        <div><div class="panel-kicker">CODEX PULSE</div><h2>Settings &amp; privacy</h2></div>
+        <button class="icon-button" id="close-settings" aria-label="Close settings">×</button>
+      </div>
+      <section>
+        <h3>Local by design</h3>
+        <p>Codex Pulse watches token metadata in <code>~/.codex/sessions</code> and archived sessions. It does not send data over the network.</p>
+        <div class="setting-status"><span>Collection mode</span><strong>Metadata only</strong></div>
+        <div class="setting-status"><span>Pricing table</span><strong id="pricing-published">—</strong></div>
+      </section>
+      <section>
+        <h3>Data controls</h3>
+        <button class="drawer-button" id="reveal-data">Reveal tracker data</button>
+        <button class="drawer-button" id="open-pricing">View official rate card</button>
+        <button class="drawer-button danger" id="reset-data">Reset &amp; re-import seven days</button>
+      </section>
+      <p class="drawer-note">Resetting affects only Codex Pulse’s ledger. Original Codex session files remain untouched.</p>
+    </div>
+  </aside>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
