@@ -99,9 +99,9 @@
   }
 
   function renderWeeklyPlanEstimate() {
-    const week = snapshot?.periods?.week || {};
-    const localTokens = num(week.total);
-    const localCost = num(week.apiCost);
+    const weeklySession = snapshot?.periods?.weeklySession || {};
+    const localTokens = num(weeklySession.total);
+    const localCost = num(weeklySession.apiCost);
     const weeklyBudget = PRO_MONTHLY_PRICE / WEEKS_PER_MONTH;
     const allowance = localTokens > 0 && localCost > 0 ? weeklyBudget * localTokens / localCost : 0;
     const used = localCost > 0 ? 100 * localCost / weeklyBudget : 0;

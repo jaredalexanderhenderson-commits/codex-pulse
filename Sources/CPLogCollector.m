@@ -497,6 +497,16 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     return aggregate;
 }
 
+- (NSDate *)weeklySessionStartForDate:(NSDate *)now {
+    NSTimeInterval resetAt = CPDouble(self.latestLimit[@"resetsAt"]);
+    NSTimeInterval window = CPDouble(self.latestLimit[@"windowMinutes"]) * 60.0;
+    if (resetAt > now.timeIntervalSince1970 && window > 0) {
+        NSDate *sessionStart = [NSDate dateWithTimeIntervalSince1970:resetAt - window];
+        if ([sessionStart compare:now] != NSOrderedDescending) { return sessionStart; }
+    }
+    return [now dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
+}
+
 - (NSArray *)dailySeriesFrom:(NSDate *)start now:(NSDate *)now {
     NSCalendar *calendar = [NSCalendar currentCalendar];
     NSDateFormatter *formatter = [NSDateFormatter new];
@@ -583,11 +593,10 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSDate *now = [self now];
     NSCalendar *calendar = [NSCalendar currentCalendar];
     NSDate *todayStart = [calendar startOfDayForDate:now];
-    NSDate *weekStart = [now dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
     NSDate *chartStart = [calendar dateByAddingUnit:NSCalendarUnitDay value:-6 toDate:todayStart options:0];
 
     NSDictionary *tracked = [self aggregateSince:self.trackingStart];
-    NSDictionary *week = [self aggregateSince:weekStart];
+    NSDictionary *weeklySession = [self aggregateSince:[self weeklySessionStartForDate:now]];
     NSDictionary *today = [self aggregateSince:todayStart];
 
     NSString *lastEvent = @"";
@@ -599,7 +608,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     return @{
         @"generatedAt": [self isoFromDate:now],
         @"trackingStart": [self isoFromDate:self.trackingStart],
-        @"periods": @{ @"tracked": tracked, @"week": week, @"today": today },
+        @"periods": @{ @"tracked": tracked, @"weeklySession": weeklySession, @"today": today },
         @"daily": [self dailySeriesFrom:chartStart now:now],
         @"models": [self groupedTotalsForKey:@"model" limit:6],
         @"origins": [self groupedTotalsForKey:@"originator" limit:6],

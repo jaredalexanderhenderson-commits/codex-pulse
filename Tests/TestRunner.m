@@ -88,6 +88,8 @@ int main(int argc, const char *argv[]) {
         AssertNear([tracked[@"credits"] doubleValue], 0.21625, 0.000001, @"Imported credit estimate is correct");
         AssertNear([tracked[@"apiCost"] doubleValue], 0.00865, 0.000001, @"Imported API-equivalent estimate is correct");
         AssertNear([snapshot[@"limit"][@"usedPercent"] doubleValue], 42.0, 0.000001, @"Latest weekly-limit value wins");
+        NSDictionary *weeklySession = snapshot[@"periods"][@"weeklySession"];
+        Assert([weeklySession[@"total"] longLongValue] == 0, @"Weekly session excludes usage before the active limit window");
 
         NSDictionary *secondSnapshot = RefreshSynchronously(collector);
         NSDictionary *secondTracked = secondSnapshot[@"periods"][@"tracked"];

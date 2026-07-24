@@ -17,6 +17,10 @@ static double CPAppDouble(id value) {
     return YES;
 }
 
+- (BOOL)mouseDownCanMoveWindow {
+    return YES;
+}
+
 - (void)mouseDown:(NSEvent *)event {
     [self.window performWindowDragWithEvent:event];
 }
@@ -68,6 +72,16 @@ static double CPAppDouble(id value) {
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
+    return NO;
+}
+
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag {
+    [self showDashboard:nil];
+    return YES;
+}
+
+- (BOOL)windowShouldClose:(NSWindow *)sender {
+    [sender orderOut:nil];
     return NO;
 }
 
@@ -171,26 +185,30 @@ static double CPAppDouble(id value) {
     WKWebViewConfiguration *configuration = [WKWebViewConfiguration new];
     configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore;
     [configuration.userContentController addScriptMessageHandler:self name:@"codexPulse"];
-    self.webView = [[WKWebView alloc] initWithFrame:frame configuration:configuration];
+    NSView *contentView = [[NSView alloc] initWithFrame:frame];
+    contentView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    self.window.contentView = contentView;
+
+    self.webView = [[WKWebView alloc] initWithFrame:contentView.bounds configuration:configuration];
     self.webView.navigationDelegate = self;
     self.webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     self.webView.allowsMagnification = NO;
-    self.window.contentView = self.webView;
+    [contentView addSubview:self.webView];
 
     // WKWebView consumes background mouse events, so movableByWindowBackground
-    // cannot make the custom HTML header draggable on its own. This transparent
-    // native overlay covers only the non-interactive header area; its fixed side
-    // margins leave the traffic lights and dashboard action buttons untouched.
+    // cannot make the custom HTML header draggable on its own. Keep the native
+    // drag view alongside the flipped web view so its AppKit coordinates remain
+    // anchored to the visible title area.
     CGFloat dragLeftMargin = 80.0;
     CGFloat dragRightMargin = 360.0;
     CGFloat dragHeight = 98.0;
     NSRect dragFrame = NSMakeRect(dragLeftMargin,
-                                  NSHeight(frame) - 122.0,
-                                  NSWidth(frame) - dragLeftMargin - dragRightMargin,
+                                  NSHeight(contentView.bounds) - 122.0,
+                                  NSWidth(contentView.bounds) - dragLeftMargin - dragRightMargin,
                                   dragHeight);
     CPWindowDragView *dragView = [[CPWindowDragView alloc] initWithFrame:dragFrame];
     dragView.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
-    [self.webView addSubview:dragView positioned:NSWindowAbove relativeTo:nil];
+    [contentView addSubview:dragView positioned:NSWindowAbove relativeTo:self.webView];
 
     NSURL *dashboardURL = [NSBundle.mainBundle URLForResource:@"dashboard" withExtension:@"html"];
     NSURL *resourcesURL = NSBundle.mainBundle.resourceURL;
