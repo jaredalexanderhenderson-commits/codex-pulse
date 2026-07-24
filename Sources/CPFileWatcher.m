@@ -54,8 +54,8 @@ static void CPFileSystemEventsCallback(ConstFSEventStreamRef streamRef,
 
     self.reconciliationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.eventQueue);
     dispatch_source_set_timer(self.reconciliationTimer,
-                              dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC),
-                              30 * NSEC_PER_SEC,
+                              dispatch_time(DISPATCH_TIME_NOW, 5 * 60 * NSEC_PER_SEC),
+                              5 * 60 * NSEC_PER_SEC,
                               2 * NSEC_PER_SEC);
     __weak typeof(self) weakSelf = self;
     dispatch_source_set_event_handler(self.reconciliationTimer, ^{

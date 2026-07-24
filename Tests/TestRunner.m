@@ -94,6 +94,50 @@ int main(int argc, const char *argv[]) {
         Assert([secondTracked[@"eventCount"] longLongValue] == 2, @"A second refresh does not duplicate events");
         Assert([secondTracked[@"total"] longLongValue] == 1250, @"Checkpoint refresh preserves totals");
 
+        NSURL *boundedStateURL = [stateRoot URLByAppendingPathComponent:@"bounded-usage-store.json"];
+        NSISO8601DateFormatter *eventFormatter = [NSISO8601DateFormatter new];
+        eventFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
+        NSDate *eventStart = ISODate(@"2026-07-19T00:00:00.000Z");
+        NSMutableArray *storedEvents = [NSMutableArray array];
+        for (NSInteger index = 0; index < 25001; index++) {
+            NSDate *timestamp = [eventStart dateByAddingTimeInterval:index];
+            [storedEvents addObject:@{
+                @"key": [NSString stringWithFormat:@"event-%ld", (long)index],
+                @"timestamp": [eventFormatter stringFromDate:timestamp],
+                @"sessionId": @"bounded-session",
+                @"originator": @"Codex",
+                @"model": @"gpt-5.6-terra",
+                @"serviceTier": @"standard",
+                @"tierLabel": @"standard",
+                @"input": @1,
+                @"cached": @0,
+                @"output": @0,
+                @"reasoning": @0,
+                @"total": @1,
+                @"credits": @0,
+                @"apiCost": @0,
+                @"pricingKnown": @YES
+            }];
+        }
+        NSDictionary *oversizedState = @{
+            @"version": @1,
+            @"trackingStart": @"2026-07-01T00:00:00.000Z",
+            @"events": storedEvents,
+            @"checkpoints": @{},
+            @"latestLimit": @{}
+        };
+        [[NSFileManager defaultManager] createDirectoryAtURL:stateRoot withIntermediateDirectories:YES attributes:nil error:nil];
+        NSData *oversizedData = [NSJSONSerialization dataWithJSONObject:oversizedState options:0 error:nil];
+        [oversizedData writeToURL:boundedStateURL options:NSDataWritingAtomic error:nil];
+        CPLogCollector *boundedCollector = [[CPLogCollector alloc] initWithSessionRoots:@[]
+                                                                                stateURL:boundedStateURL
+                                                                           pricingEngine:pricing
+                                                                                     now:ISODate(@"2026-07-20T12:00:00.000Z")];
+        NSDictionary *boundedSnapshot = RefreshSynchronously(boundedCollector);
+        Assert([boundedSnapshot[@"health"][@"eventsTracked"] longLongValue] == 25000, @"Collector caps retained event history");
+        NSDictionary *savedBoundedState = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:boundedStateURL] options:0 error:nil];
+        Assert([savedBoundedState[@"events"] count] == 25000, @"Collector persists the compacted event history");
+
         [[NSFileManager defaultManager] removeItemAtURL:stateRoot error:nil];
         NSLog(@"%d failure(s)", failures);
     }

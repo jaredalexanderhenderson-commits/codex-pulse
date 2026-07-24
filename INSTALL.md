@@ -12,7 +12,7 @@ The menu-bar percentage and dashboard weekly-limit card show the percentage rema
 
 Codex Pulse checks for signed updates after launch. You can also choose **Check for Updates…** from the menu-bar menu. Beginning with version 1.4.2, updates download, verify, install, and relaunch directly from the app.
 
-On first launch, Codex Pulse imports eligible local token events from the preceding seven days. It then retains that seed plus new local Codex Desktop and CLI usage.
+On first launch, Codex Pulse imports eligible local token events from the preceding seven days. It retains recent local detail for up to 14 days and caps the ledger at 25,000 events to keep long-running installations responsive.
 
 The app reads `~/.codex/sessions` and `~/.codex/archived_sessions`. It does not modify those directories and does not retain prompts, responses, tool output, or reasoning text.
 
