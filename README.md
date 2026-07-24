@@ -30,5 +30,7 @@ Codex Pulse checks the repository's latest public GitHub release shortly after l
 - Reasoning output is a subset of output.
 - Historical events are calculated from cumulative-counter deltas, with `last_token_usage` as the reset-safe fallback.
 - Event keys deduplicate moved or archived session files.
+- Local event detail is retained for up to 14 days and capped at 25,000 events, preventing the on-disk ledger from growing without bound.
 - Credits use the bundled dated OpenAI rate table.
 - Dollar amounts are API-equivalent estimates, not ChatGPT subscription charges.
+- The weekly-token allowance estimate spreads the $200 Pro subscription across 4.35 weeks, then converts that weekly benchmark into tokens using the user's local API-equivalent token mix. It is not an OpenAI-published token quota.

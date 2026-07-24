@@ -42,11 +42,11 @@
 
     <section class="period-row" aria-label="Reporting period">
       <div class="segmented-control" id="period-control">
-        <button data-period="tracked" class="active">Since tracking</button>
+        <button data-period="tracked" class="active">Recent history</button>
         <button data-period="week">Last 7 days</button>
         <button data-period="today">Today</button>
       </div>
-      <div class="tracking-since">Tracking since <strong id="tracking-start">—</strong></div>
+      <div class="tracking-since">Keeping local detail since <strong id="tracking-start">—</strong></div>
     </section>
 
     <section class="headline-grid" aria-label="Headline usage metrics">
@@ -109,6 +109,26 @@
           <strong id="reset-countdown">—</strong>
           <small id="reset-date">—</small>
         </div>
+      </article>
+
+      <article class="metric-card plan-card">
+        <div class="card-glow"></div>
+        <div class="metric-header">
+          <div>
+            <div class="metric-label">EST. WEEKLY TOKEN ALLOWANCE</div>
+            <div class="metric-value" id="weekly-token-allowance">—</div>
+          </div>
+          <div class="metric-icon cyan">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V6m5 12V9m5 9V4m5 14v-7"/><path d="M3 20h18"/></svg>
+          </div>
+        </div>
+        <div class="metric-caption">$200 Pro plan · based on your local token mix</div>
+        <div class="plan-estimate-grid">
+          <div><span>Last 7 days</span><strong id="weekly-local-tokens">—</strong></div>
+          <div><span>Est. plan used</span><strong id="weekly-plan-used">—</strong></div>
+        </div>
+        <div class="thin-track plan-track"><span id="weekly-plan-bar"></span></div>
+        <div class="plan-note" id="weekly-plan-note">Waiting for priced local usage</div>
       </article>
     </section>
 

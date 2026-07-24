@@ -9,6 +9,9 @@ static double CPDouble(id value) {
     return [value respondsToSelector:@selector(doubleValue)] ? [value doubleValue] : 0.0;
 }
 
+static const NSTimeInterval CPHistoryRetentionInterval = 14.0 * 24.0 * 60.0 * 60.0;
+static const NSUInteger CPMaximumStoredEvents = 25000;
+
 static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSString *needle = [NSString stringWithFormat:@"\"%@\"", key];
     NSRange keyRange = [line rangeOfString:needle];
@@ -55,6 +58,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 @property (nonatomic, strong) NSISO8601DateFormatter *fractionalFormatter;
 @property (nonatomic, strong) NSISO8601DateFormatter *plainFormatter;
 @property (nonatomic, strong) NSDictionary *cachedSnapshot;
+@property (nonatomic, assign) BOOL stateDirty;
 @end
 
 @implementation CPLogCollector
@@ -79,9 +83,15 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     _fractionalFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
     _plainFormatter = [NSISO8601DateFormatter new];
     _plainFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime;
-
-    [self loadState];
+    _trackingStart = [[self now] dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
     _cachedSnapshot = [self buildSnapshot];
+
+    // State files can grow into tens of megabytes after long-running usage.
+    // Loading and aggregating them off the main thread keeps the dashboard responsive.
+    dispatch_async(_queue, ^{
+        [self loadState];
+        self.cachedSnapshot = [self buildSnapshot];
+    });
     return self;
 }
 
@@ -138,7 +148,55 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     if (!data) { return; }
     [[NSFileManager defaultManager] createDirectoryAtURL:self.stateURL.URLByDeletingLastPathComponent
                              withIntermediateDirectories:YES attributes:nil error:nil];
-    [data writeToURL:self.stateURL options:NSDataWritingAtomic error:nil];
+    if ([data writeToURL:self.stateURL options:NSDataWritingAtomic error:nil]) {
+        self.stateDirty = NO;
+    }
+}
+
+- (void)pruneHistoricalState {
+    NSDate *cutoff = [[self now] dateByAddingTimeInterval:-CPHistoryRetentionInterval];
+    if ([self.trackingStart compare:cutoff] == NSOrderedAscending) {
+        self.trackingStart = cutoff;
+        self.stateDirty = YES;
+    }
+
+    NSMutableArray<NSMutableDictionary *> *keptEvents = [NSMutableArray array];
+    for (NSMutableDictionary *event in self.events) {
+        NSDate *date = [self dateFromISO:event[@"timestamp"]];
+        if (date && [date compare:self.trackingStart] != NSOrderedAscending) {
+            [keptEvents addObject:event];
+        }
+    }
+    [keptEvents sortUsingComparator:^NSComparisonResult(NSDictionary *left, NSDictionary *right) {
+        return [left[@"timestamp"] compare:right[@"timestamp"]];
+    }];
+    if (keptEvents.count > CPMaximumStoredEvents) {
+        NSRange recentRange = NSMakeRange(keptEvents.count - CPMaximumStoredEvents, CPMaximumStoredEvents);
+        keptEvents = [[keptEvents subarrayWithRange:recentRange] mutableCopy];
+        NSDate *oldestKept = [self dateFromISO:keptEvents.firstObject[@"timestamp"]];
+        if (oldestKept && [oldestKept compare:self.trackingStart] == NSOrderedDescending) {
+            self.trackingStart = oldestKept;
+        }
+    }
+    if (keptEvents.count != self.events.count) {
+        self.events = keptEvents;
+        [self.eventKeys removeAllObjects];
+        for (NSDictionary *event in self.events) {
+            NSString *key = event[@"key"];
+            if (key.length) { [self.eventKeys addObject:key]; }
+        }
+        self.stateDirty = YES;
+    }
+
+    NSFileManager *fileManager = NSFileManager.defaultManager;
+    for (NSString *path in self.checkpoints.allKeys.copy) {
+        NSDictionary *attributes = [fileManager attributesOfItemAtPath:path error:nil];
+        NSDate *modified = attributes[NSFileModificationDate];
+        if (!modified || [modified compare:self.trackingStart] == NSOrderedAscending) {
+            [self.checkpoints removeObjectForKey:path];
+            self.stateDirty = YES;
+        }
+    }
 }
 
 - (BOOL)isEligibleOriginator:(NSString *)originator {
@@ -151,7 +209,8 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 - (void)refreshWithCompletion:(CPCollectorCompletion)completion {
     dispatch_async(self.queue, ^{
         [self scanRoots];
-        [self saveState];
+        [self pruneHistoricalState];
+        if (self.stateDirty) { [self saveState]; }
         self.cachedSnapshot = [self buildSnapshot];
         NSDictionary *snapshot = self.cachedSnapshot;
         if (completion) {
@@ -167,7 +226,9 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
         [self.eventKeys removeAllObjects];
         self.latestLimit = nil;
         self.trackingStart = [[self now] dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
+        self.stateDirty = YES;
         [self scanRoots];
+        [self pruneHistoricalState];
         [self saveState];
         self.cachedSnapshot = [self buildSnapshot];
         NSDictionary *snapshot = self.cachedSnapshot;
@@ -251,6 +312,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     [handle closeFile];
     checkpoint[@"offset"] = @(processedOffset);
     self.checkpoints[fileURL.path] = checkpoint;
+    self.stateDirty = YES;
 }
 
 - (void)processLineData:(NSData *)lineData
@@ -375,6 +437,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 
     [self.events addObject:event];
     [self.eventKeys addObject:eventKey];
+    self.stateDirty = YES;
 }
 
 - (void)captureLatestLimitFromPayload:(NSDictionary *)payload timestamp:(NSString *)timestamp {
@@ -396,6 +459,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
         @"hasCredits": credits[@"has_credits"] ?: @NO,
         @"creditBalance": credits[@"balance"] ?: @"0"
     } mutableCopy];
+    self.stateDirty = YES;
 }
 
 - (NSMutableDictionary *)emptyAggregate {
