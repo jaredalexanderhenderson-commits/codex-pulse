@@ -3,6 +3,8 @@
 
   let snapshot = null;
   let activePeriod = 'tracked';
+  const PRO_MONTHLY_PRICE = 200;
+  const WEEKS_PER_MONTH = 365.2425 / 12 / 7;
   const $ = (id) => document.getElementById(id);
   const colors = ['#a468ff', '#d56dff', '#6fd9ff', '#ffbd6c', '#6ee5b7', '#ff769e'];
 
@@ -96,6 +98,23 @@
     setText('reset-date', reset ? reset.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'No reset timestamp yet');
   }
 
+  function renderWeeklyPlanEstimate() {
+    const week = snapshot?.periods?.week || {};
+    const localTokens = num(week.total);
+    const localCost = num(week.apiCost);
+    const weeklyBudget = PRO_MONTHLY_PRICE / WEEKS_PER_MONTH;
+    const allowance = localTokens > 0 && localCost > 0 ? weeklyBudget * localTokens / localCost : 0;
+    const used = localCost > 0 ? 100 * localCost / weeklyBudget : 0;
+
+    setText('weekly-token-allowance', allowance > 0 ? `~${compact(allowance)}` : '—');
+    setText('weekly-local-tokens', compact(localTokens));
+    setText('weekly-plan-used', localCost > 0 ? `${used.toFixed(1)}%` : '—');
+    $('weekly-plan-bar').style.width = `${Math.min(100, used)}%`;
+    setText('weekly-plan-note', localCost > 0
+      ? `~${money(weeklyBudget)} weekly benchmark at current API-equivalent rates`
+      : 'Waiting for locally priced usage');
+  }
+
   function renderComposition(aggregate) {
     const input = num(aggregate.input);
     const output = num(aggregate.output);
@@ -187,6 +206,7 @@
     if (!snapshot) return;
     renderHeadline();
     renderLimit();
+    renderWeeklyPlanEstimate();
     renderTrend();
     renderModels();
     renderSessions();

@@ -32,3 +32,4 @@ Codex Pulse checks the repository's latest public GitHub release shortly after l
 - Event keys deduplicate moved or archived session files.
 - Credits use the bundled dated OpenAI rate table.
 - Dollar amounts are API-equivalent estimates, not ChatGPT subscription charges.
+- The weekly-token allowance estimate spreads the $200 Pro subscription across 4.35 weeks, then converts that weekly benchmark into tokens using the user's local API-equivalent token mix. It is not an OpenAI-published token quota.
