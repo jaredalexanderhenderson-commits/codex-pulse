@@ -9,7 +9,7 @@ static double CPDouble(id value) {
     return [value respondsToSelector:@selector(doubleValue)] ? [value doubleValue] : 0.0;
 }
 
-static const NSTimeInterval CPHistoryRetentionInterval = 14.0 * 24.0 * 60.0 * 60.0;
+static const NSInteger CPCollectorStateVersion = 2;
 static const NSUInteger CPMaximumStoredEvents = 25000;
 
 static NSString *CPJSONStringValue(NSString *line, NSString *key) {
@@ -59,6 +59,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 @property (nonatomic, strong) NSISO8601DateFormatter *plainFormatter;
 @property (nonatomic, strong) NSDictionary *cachedSnapshot;
 @property (nonatomic, assign) BOOL stateDirty;
+@property (nonatomic, assign) BOOL needsHistoricalReimport;
 @end
 
 @implementation CPLogCollector
@@ -83,7 +84,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     _fractionalFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime | NSISO8601DateFormatWithFractionalSeconds;
     _plainFormatter = [NSISO8601DateFormatter new];
     _plainFormatter.formatOptions = NSISO8601DateFormatWithInternetDateTime;
-    _trackingStart = [[self now] dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
+    _trackingStart = [self historicalTrackingStart];
     _cachedSnapshot = [self buildSnapshot];
 
     // State files can grow into tens of megabytes after long-running usage.
@@ -99,6 +100,21 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     return self.fixedNow ?: [NSDate date];
 }
 
+// Use a stable local-calendar boundary, rather than a rolling duration. Once it
+// is saved, tracking continues from this point until the event safety cap is hit.
+- (NSDate *)historicalTrackingStart {
+    NSCalendar *calendar = [NSCalendar currentCalendar];
+    NSDateComponents *components = [calendar components:NSCalendarUnitYear fromDate:[self now]];
+    components.month = 6;
+    components.day = 1;
+    components.hour = 0;
+    components.minute = 0;
+    components.second = 0;
+    NSDate *juneFirst = [calendar dateFromComponents:components];
+    if ([juneFirst compare:[self now]] != NSOrderedDescending) { return juneFirst; }
+    return [calendar dateByAddingUnit:NSCalendarUnitYear value:-1 toDate:juneFirst options:0];
+}
+
 - (NSDate *)dateFromISO:(NSString *)value {
     if (![value isKindOfClass:[NSString class]]) { return nil; }
     return [self.fractionalFormatter dateFromString:value] ?: [self.plainFormatter dateFromString:value];
@@ -112,8 +128,17 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSData *data = [NSData dataWithContentsOfURL:self.stateURL];
     NSDictionary *state = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
 
+    // Version 1 retained only a rolling two-week window. Re-importing avoids
+    // preserving old checkpoints that would otherwise prevent June events from
+    // being read after the retention window expands.
+    if (state && [state[@"version"] integerValue] < CPCollectorStateVersion) {
+        self.trackingStart = [self historicalTrackingStart];
+        self.needsHistoricalReimport = YES;
+        return;
+    }
+
     NSString *trackingStartString = [state[@"trackingStart"] isKindOfClass:[NSString class]] ? state[@"trackingStart"] : nil;
-    self.trackingStart = [self dateFromISO:trackingStartString] ?: [[self now] dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
+    self.trackingStart = [self dateFromISO:trackingStartString] ?: [self historicalTrackingStart];
 
     NSArray *storedEvents = [state[@"events"] isKindOfClass:[NSArray class]] ? state[@"events"] : @[];
     for (NSDictionary *event in storedEvents) {
@@ -138,7 +163,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 
 - (void)saveState {
     NSDictionary *state = @{
-        @"version": @1,
+        @"version": @(CPCollectorStateVersion),
         @"trackingStart": [self isoFromDate:self.trackingStart],
         @"events": self.events,
         @"checkpoints": self.checkpoints,
@@ -154,12 +179,6 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 }
 
 - (void)pruneHistoricalState {
-    NSDate *cutoff = [[self now] dateByAddingTimeInterval:-CPHistoryRetentionInterval];
-    if ([self.trackingStart compare:cutoff] == NSOrderedAscending) {
-        self.trackingStart = cutoff;
-        self.stateDirty = YES;
-    }
-
     NSMutableArray<NSMutableDictionary *> *keptEvents = [NSMutableArray array];
     for (NSMutableDictionary *event in self.events) {
         NSDate *date = [self dateFromISO:event[@"timestamp"]];
@@ -188,15 +207,16 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
         self.stateDirty = YES;
     }
 
-    NSFileManager *fileManager = NSFileManager.defaultManager;
-    for (NSString *path in self.checkpoints.allKeys.copy) {
-        NSDictionary *attributes = [fileManager attributesOfItemAtPath:path error:nil];
-        NSDate *modified = attributes[NSFileModificationDate];
-        if (!modified || [modified compare:self.trackingStart] == NSOrderedAscending) {
-            [self.checkpoints removeObjectForKey:path];
-            self.stateDirty = YES;
-        }
-    }
+}
+
+- (void)clearCollectedStateForHistoricalReimport {
+    [self.events removeAllObjects];
+    [self.checkpoints removeAllObjects];
+    [self.eventKeys removeAllObjects];
+    self.latestLimit = nil;
+    self.trackingStart = [self historicalTrackingStart];
+    self.needsHistoricalReimport = NO;
+    self.stateDirty = YES;
 }
 
 - (BOOL)isEligibleOriginator:(NSString *)originator {
@@ -208,6 +228,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 
 - (void)refreshWithCompletion:(CPCollectorCompletion)completion {
     dispatch_async(self.queue, ^{
+        if (self.needsHistoricalReimport) { [self clearCollectedStateForHistoricalReimport]; }
         [self scanRoots];
         [self pruneHistoricalState];
         if (self.stateDirty) { [self saveState]; }
@@ -221,12 +242,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 
 - (void)resetAndReimportWithCompletion:(CPCollectorCompletion)completion {
     dispatch_async(self.queue, ^{
-        [self.events removeAllObjects];
-        [self.checkpoints removeAllObjects];
-        [self.eventKeys removeAllObjects];
-        self.latestLimit = nil;
-        self.trackingStart = [[self now] dateByAddingTimeInterval:-(7.0 * 24.0 * 60.0 * 60.0)];
-        self.stateDirty = YES;
+        [self clearCollectedStateForHistoricalReimport];
         [self scanRoots];
         [self pruneHistoricalState];
         [self saveState];
@@ -513,9 +529,13 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
     formatter.dateFormat = @"yyyy-MM-dd";
 
+    NSDate *firstDay = [calendar startOfDayForDate:start];
+    NSDate *lastDay = [calendar startOfDayForDate:now];
+    NSDateComponents *span = [calendar components:NSCalendarUnitDay fromDate:firstDay toDate:lastDay options:0];
+    NSInteger dayCount = MAX(0, span.day);
     NSMutableDictionary<NSString *, NSMutableDictionary *> *buckets = [NSMutableDictionary dictionary];
-    for (NSInteger day = 0; day < 7; day++) {
-        NSDate *date = [calendar dateByAddingUnit:NSCalendarUnitDay value:day toDate:start options:0];
+    for (NSInteger day = 0; day <= dayCount; day++) {
+        NSDate *date = [calendar dateByAddingUnit:NSCalendarUnitDay value:day toDate:firstDay options:0];
         NSString *key = [formatter stringFromDate:date];
         NSMutableDictionary *bucket = [self emptyAggregate];
         bucket[@"date"] = key;
@@ -593,7 +613,7 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSDate *now = [self now];
     NSCalendar *calendar = [NSCalendar currentCalendar];
     NSDate *todayStart = [calendar startOfDayForDate:now];
-    NSDate *chartStart = [calendar dateByAddingUnit:NSCalendarUnitDay value:-6 toDate:todayStart options:0];
+    NSDate *chartStart = [calendar startOfDayForDate:self.trackingStart];
 
     NSDictionary *tracked = [self aggregateSince:self.trackingStart];
     NSDictionary *weeklySession = [self aggregateSince:[self weeklySessionStartForDate:now]];

@@ -8,6 +8,18 @@ static double CPAppDouble(id value) {
     return [value respondsToSelector:@selector(doubleValue)] ? [value doubleValue] : 0.0;
 }
 
+// Height of the dashboard's glass toolbar, in CSS pixels. The web view is
+// point-for-point with CSS pixels here, so the same number positions the native
+// drag overlay over that toolbar. Keep in sync with `--titlebar-h`.
+static const CGFloat CPTitlebarHeight = 52.0;
+
+// Matches the dashboard's `--canvas`, so the window never flashes a colour the
+// page is about to contradict. The dashboard is light-only and does not follow the
+// system appearance, hence the fixed value rather than a dynamic provider.
+static NSColor *CPWindowBackgroundColor(void) {
+    return [NSColor colorWithSRGBRed:0.875 green:0.898 blue:0.953 alpha:1.0];
+}
+
 @interface CPWindowDragView : NSView
 @end
 
@@ -34,6 +46,7 @@ static double CPAppDouble(id value) {
 @property (nonatomic, strong) NSMenuItem *menuCreditItem;
 @property (nonatomic, strong) NSWindow *window;
 @property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) NSView *dragView;
 @property (nonatomic, strong) CPLogCollector *collector;
 @property (nonatomic, strong) CPFileWatcher *watcher;
 @property (nonatomic, strong) NSDictionary *latestSnapshot;
@@ -83,6 +96,30 @@ static double CPAppDouble(id value) {
 - (BOOL)windowShouldClose:(NSWindow *)sender {
     [sender orderOut:nil];
     return NO;
+}
+
+- (void)windowDidResize:(NSNotification *)notification {
+    [self layoutDragView];
+}
+
+// Spans the dashboard toolbar horizontally, leaving the traffic lights on the
+// left and the toolbar's Live pill, refresh and settings buttons on the right
+// clickable. The dashboard centres its toolbar contents in a 1200pt column, so
+// the right-hand gutter grows with the window's half-overflow past that column.
+- (void)layoutDragView {
+    NSView *contentView = self.window.contentView;
+    if (!contentView || !self.dragView) { return; }
+
+    CGFloat width = NSWidth(contentView.bounds);
+    CGFloat leftGutter = 80.0;
+    CGFloat contentColumn = MIN(1200.0, width - 44.0);
+    CGFloat rightGutter = 240.0 + MAX(0.0, (width - contentColumn) / 2.0 - 22.0);
+    CGFloat dragWidth = MAX(0.0, width - leftGutter - rightGutter);
+
+    self.dragView.frame = NSMakeRect(leftGutter,
+                                     NSHeight(contentView.bounds) - CPTitlebarHeight,
+                                     dragWidth,
+                                     CPTitlebarHeight);
 }
 
 - (NSArray<NSURL *> *)sessionRoots {
@@ -178,7 +215,7 @@ static double CPAppDouble(id value) {
     self.window.titlebarAppearsTransparent = YES;
     self.window.movableByWindowBackground = YES;
     self.window.minSize = NSMakeSize(900, 640);
-    self.window.backgroundColor = NSColor.blackColor;
+    self.window.backgroundColor = CPWindowBackgroundColor();
     self.window.delegate = self;
     [self.window center];
 
@@ -196,19 +233,13 @@ static double CPAppDouble(id value) {
     [contentView addSubview:self.webView];
 
     // WKWebView consumes background mouse events, so movableByWindowBackground
-    // cannot make the custom HTML header draggable on its own. Keep the native
-    // drag view alongside the flipped web view so its AppKit coordinates remain
-    // anchored to the visible title area.
-    CGFloat dragLeftMargin = 80.0;
-    CGFloat dragRightMargin = 360.0;
-    CGFloat dragHeight = 98.0;
-    NSRect dragFrame = NSMakeRect(dragLeftMargin,
-                                  NSHeight(contentView.bounds) - 122.0,
-                                  NSWidth(contentView.bounds) - dragLeftMargin - dragRightMargin,
-                                  dragHeight);
-    CPWindowDragView *dragView = [[CPWindowDragView alloc] initWithFrame:dragFrame];
-    dragView.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
-    [contentView addSubview:dragView positioned:NSWindowAbove relativeTo:self.webView];
+    // cannot make the dashboard's HTML toolbar draggable on its own. Keep a
+    // native drag view over that toolbar instead. Its frame is recomputed on
+    // resize rather than autoresized, because the reserved right-hand gutter has
+    // to stay wide enough to expose the toolbar's own buttons at any width.
+    self.dragView = [[CPWindowDragView alloc] initWithFrame:NSZeroRect];
+    [contentView addSubview:self.dragView positioned:NSWindowAbove relativeTo:self.webView];
+    [self layoutDragView];
 
     NSURL *dashboardURL = [NSBundle.mainBundle URLForResource:@"dashboard" withExtension:@"html"];
     NSURL *resourcesURL = NSBundle.mainBundle.resourceURL;
@@ -275,6 +306,13 @@ static double CPAppDouble(id value) {
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
     self.webViewReady = YES;
+    // The dashboard shows the running version in its settings drawer. Feeding it
+    // from the bundle keeps the two from drifting apart at release time.
+    NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
+    NSData *encoded = [NSJSONSerialization dataWithJSONObject:@[version] options:0 error:NULL];
+    NSString *literal = [[NSString alloc] initWithData:encoded encoding:NSUTF8StringEncoding];
+    NSString *script = [NSString stringWithFormat:@"window.codexPulseSetVersion && window.codexPulseSetVersion(%@[0]);", literal];
+    [self.webView evaluateJavaScript:script completionHandler:nil];
     [self pushSnapshotToDashboard];
 }
 
@@ -301,7 +339,7 @@ static double CPAppDouble(id value) {
 - (void)confirmReset {
     NSAlert *alert = [NSAlert new];
     alert.messageText = @"Reset Codex Pulse data?";
-    alert.informativeText = @"This clears only the app’s local ledger, then re-imports the latest seven days. Codex session files are never changed.";
+    alert.informativeText = @"This clears only the app’s local ledger, then re-imports usage from the beginning of June. Codex session files are never changed.";
     [alert addButtonWithTitle:@"Reset & Re-import"];
     [alert addButtonWithTitle:@"Cancel"];
     [alert beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse returnCode) {

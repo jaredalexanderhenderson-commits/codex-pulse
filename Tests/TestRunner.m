@@ -78,23 +78,46 @@ int main(int argc, const char *argv[]) {
         NSDictionary *snapshot = RefreshSynchronously(collector);
         Assert(snapshot != nil, @"Collector refresh completes");
         NSDictionary *tracked = snapshot[@"periods"][@"tracked"];
-        Assert([tracked[@"input"] longLongValue] == 1100, @"Seven-day import uses cumulative input deltas");
-        Assert([tracked[@"cached"] longLongValue] == 300, @"Cached input deltas are preserved");
-        Assert([tracked[@"output"] longLongValue] == 150, @"Output deltas are preserved");
+        Assert([snapshot[@"trackingStart"] hasPrefix:@"2026-06-01"], @"Tracking starts at the beginning of June");
+        Assert([tracked[@"input"] longLongValue] == 2100, @"June timeline imports cumulative input deltas");
+        Assert([tracked[@"cached"] longLongValue] == 400, @"Cached input deltas are preserved");
+        Assert([tracked[@"output"] longLongValue] == 250, @"Output deltas are preserved");
         Assert([tracked[@"reasoning"] longLongValue] == 25, @"Reasoning remains an output subset");
-        Assert([tracked[@"total"] longLongValue] == 1250, @"Pre-cutoff usage is excluded");
-        Assert([tracked[@"eventCount"] longLongValue] == 2, @"Only post-cutoff model calls are counted");
+        Assert([tracked[@"total"] longLongValue] == 2350, @"Usage from the full June timeline is included");
+        Assert([tracked[@"eventCount"] longLongValue] == 3, @"All June-forward model calls are counted");
         Assert([tracked[@"sessionCount"] longLongValue] == 1, @"Session aggregation is stable");
-        AssertNear([tracked[@"credits"] doubleValue], 0.21625, 0.000001, @"Imported credit estimate is correct");
-        AssertNear([tracked[@"apiCost"] doubleValue], 0.00865, 0.000001, @"Imported API-equivalent estimate is correct");
+        AssertNear([tracked[@"credits"] doubleValue], 0.405, 0.000001, @"Imported credit estimate is correct");
+        AssertNear([tracked[@"apiCost"] doubleValue], 0.0162, 0.000001, @"Imported API-equivalent estimate is correct");
         AssertNear([snapshot[@"limit"][@"usedPercent"] doubleValue], 42.0, 0.000001, @"Latest weekly-limit value wins");
         NSDictionary *weeklySession = snapshot[@"periods"][@"weeklySession"];
         Assert([weeklySession[@"total"] longLongValue] == 0, @"Weekly session excludes usage before the active limit window");
+        Assert([snapshot[@"daily"] count] == 50, @"Daily chart spans June 1 through today");
 
         NSDictionary *secondSnapshot = RefreshSynchronously(collector);
         NSDictionary *secondTracked = secondSnapshot[@"periods"][@"tracked"];
-        Assert([secondTracked[@"eventCount"] longLongValue] == 2, @"A second refresh does not duplicate events");
-        Assert([secondTracked[@"total"] longLongValue] == 1250, @"Checkpoint refresh preserves totals");
+        Assert([secondTracked[@"eventCount"] longLongValue] == 3, @"A second refresh does not duplicate events");
+        Assert([secondTracked[@"total"] longLongValue] == 2350, @"Checkpoint refresh preserves totals");
+
+        NSURL *legacyStateURL = [stateRoot URLByAppendingPathComponent:@"legacy-usage-store.json"];
+        NSURL *fixtureURL = [fixtureRoot URLByAppendingPathComponent:@"sample-session.jsonl"];
+        unsigned long long fixtureSize = [[NSFileManager defaultManager] attributesOfItemAtPath:fixtureURL.path error:nil].fileSize;
+        NSDictionary *legacyState = @{
+            @"version": @1,
+            @"trackingStart": @"2026-07-13T00:00:00.000Z",
+            @"events": @[],
+            @"checkpoints": @{ fixtureURL.path: @{ @"offset": @(fixtureSize) } },
+            @"latestLimit": @{}
+        };
+        NSData *legacyData = [NSJSONSerialization dataWithJSONObject:legacyState options:0 error:nil];
+        [legacyData writeToURL:legacyStateURL options:NSDataWritingAtomic error:nil];
+        CPLogCollector *migratedCollector = [[CPLogCollector alloc] initWithSessionRoots:@[fixtureRoot]
+                                                                                stateURL:legacyStateURL
+                                                                           pricingEngine:pricing
+                                                                                     now:ISODate(@"2026-07-20T12:00:00.000Z")];
+        NSDictionary *migratedSnapshot = RefreshSynchronously(migratedCollector);
+        Assert([migratedSnapshot[@"periods"][@"tracked"][@"total"] longLongValue] == 2350, @"Legacy state re-imports June usage despite old checkpoints");
+        NSDictionary *migratedState = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:legacyStateURL] options:0 error:nil];
+        Assert([migratedState[@"version"] integerValue] == 2, @"June timeline migration is persisted");
 
         NSURL *boundedStateURL = [stateRoot URLByAppendingPathComponent:@"bounded-usage-store.json"];
         NSISO8601DateFormatter *eventFormatter = [NSISO8601DateFormatter new];
@@ -122,7 +145,7 @@ int main(int argc, const char *argv[]) {
             }];
         }
         NSDictionary *oversizedState = @{
-            @"version": @1,
+            @"version": @2,
             @"trackingStart": @"2026-07-01T00:00:00.000Z",
             @"events": storedEvents,
             @"checkpoints": @{},

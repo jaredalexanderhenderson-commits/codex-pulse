@@ -1,6 +1,6 @@
 # Codex Pulse
 
-Codex Pulse is a private, local macOS token dashboard for Codex Desktop and CLI sessions. It appears in both the Dock and the menu bar, has a draggable custom header, and presents raw token counts, estimated Codex credits and API-equivalent cost, and the current server-reported weekly-limit percentage remaining.
+Codex Pulse is a private, local macOS token dashboard for Codex Desktop and CLI sessions. It appears in both the Dock and the menu bar, has a draggable glass toolbar, and presents raw token counts, estimated Codex credits and API-equivalent cost, the current server-reported weekly-limit percentage remaining, and how that limit is pacing against the window. The interface uses a light "liquid glass" theme and does not follow the system appearance.
 
 ## Privacy boundary
 
@@ -30,7 +30,7 @@ Codex Pulse checks the repository's latest public GitHub release shortly after l
 - Reasoning output is a subset of output.
 - Historical events are calculated from cumulative-counter deltas, with `last_token_usage` as the reset-safe fallback.
 - Event keys deduplicate moved or archived session files.
-- Local event detail is retained for up to 14 days and capped at 25,000 events, preventing the on-disk ledger from growing without bound.
+- Local event detail begins on June 1 and continues forward, capped at 25,000 events to keep the on-disk ledger bounded.
 - Credits use the bundled dated OpenAI rate table.
 - Dollar amounts are API-equivalent estimates, not ChatGPT subscription charges.
-- The weekly-token allowance estimate spreads the $200 Pro subscription across 4.35 weeks, then converts that weekly benchmark into tokens using the user's local API-equivalent token mix. It is not an OpenAI-published token quota.
+- The pace projection divides the server-reported weekly-limit percentage by the fraction of the limit window that has elapsed. It is a linear extrapolation of the current rate, withheld until 8% of the window has passed, and is not a prediction from OpenAI.
