@@ -117,7 +117,7 @@ int main(int argc, const char *argv[]) {
         NSDictionary *migratedSnapshot = RefreshSynchronously(migratedCollector);
         Assert([migratedSnapshot[@"periods"][@"tracked"][@"total"] longLongValue] == 2350, @"Legacy state re-imports June usage despite old checkpoints");
         NSDictionary *migratedState = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:legacyStateURL] options:0 error:nil];
-        Assert([migratedState[@"version"] integerValue] == 2, @"June timeline migration is persisted");
+        Assert([migratedState[@"version"] integerValue] == 3, @"June timeline migration is persisted");
 
         NSURL *boundedStateURL = [stateRoot URLByAppendingPathComponent:@"bounded-usage-store.json"];
         NSISO8601DateFormatter *eventFormatter = [NSISO8601DateFormatter new];
@@ -145,7 +145,7 @@ int main(int argc, const char *argv[]) {
             }];
         }
         NSDictionary *oversizedState = @{
-            @"version": @2,
+            @"version": @3,
             @"trackingStart": @"2026-07-01T00:00:00.000Z",
             @"events": storedEvents,
             @"checkpoints": @{},
@@ -159,9 +159,9 @@ int main(int argc, const char *argv[]) {
                                                                            pricingEngine:pricing
                                                                                      now:ISODate(@"2026-07-20T12:00:00.000Z")];
         NSDictionary *boundedSnapshot = RefreshSynchronously(boundedCollector);
-        Assert([boundedSnapshot[@"health"][@"eventsTracked"] longLongValue] == 25000, @"Collector caps retained event history");
+        Assert([boundedSnapshot[@"health"][@"eventsTracked"] longLongValue] == 25001, @"Collector retains more than 25,000 historical events");
         NSDictionary *savedBoundedState = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:boundedStateURL] options:0 error:nil];
-        Assert([savedBoundedState[@"events"] count] == 25000, @"Collector persists the compacted event history");
+        Assert([savedBoundedState[@"events"] count] == 25001, @"Collector persists the full event history");
 
         [[NSFileManager defaultManager] removeItemAtURL:stateRoot error:nil];
         NSLog(@"%d failure(s)", failures);

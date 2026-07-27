@@ -9,8 +9,7 @@ static double CPDouble(id value) {
     return [value respondsToSelector:@selector(doubleValue)] ? [value doubleValue] : 0.0;
 }
 
-static const NSInteger CPCollectorStateVersion = 2;
-static const NSUInteger CPMaximumStoredEvents = 25000;
+static const NSInteger CPCollectorStateVersion = 3;
 
 static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSString *needle = [NSString stringWithFormat:@"\"%@\"", key];
@@ -128,9 +127,9 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSData *data = [NSData dataWithContentsOfURL:self.stateURL];
     NSDictionary *state = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
 
-    // Version 1 retained only a rolling two-week window. Re-importing avoids
-    // preserving old checkpoints that would otherwise prevent June events from
-    // being read after the retention window expands.
+    // Earlier versions either retained a rolling two-week window or cut off at
+    // 25,000 events. Re-importing avoids preserving checkpoints that would
+    // otherwise prevent June events from being read after the retention changes.
     if (state && [state[@"version"] integerValue] < CPCollectorStateVersion) {
         self.trackingStart = [self historicalTrackingStart];
         self.needsHistoricalReimport = YES;
@@ -189,14 +188,6 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     [keptEvents sortUsingComparator:^NSComparisonResult(NSDictionary *left, NSDictionary *right) {
         return [left[@"timestamp"] compare:right[@"timestamp"]];
     }];
-    if (keptEvents.count > CPMaximumStoredEvents) {
-        NSRange recentRange = NSMakeRange(keptEvents.count - CPMaximumStoredEvents, CPMaximumStoredEvents);
-        keptEvents = [[keptEvents subarrayWithRange:recentRange] mutableCopy];
-        NSDate *oldestKept = [self dateFromISO:keptEvents.firstObject[@"timestamp"]];
-        if (oldestKept && [oldestKept compare:self.trackingStart] == NSOrderedDescending) {
-            self.trackingStart = oldestKept;
-        }
-    }
     if (keptEvents.count != self.events.count) {
         self.events = keptEvents;
         [self.eventKeys removeAllObjects];
