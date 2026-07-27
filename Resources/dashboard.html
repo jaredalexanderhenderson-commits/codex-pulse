@@ -12,8 +12,11 @@
     <div class="titlebar-inner">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">
+          <!-- Mirrors Sources/CPBrandMark.h with y flipped, since SVG's y points
+               down. Keep the two in step if either changes. -->
           <svg viewBox="0 0 32 32">
-            <path class="brand-trace" d="M3 17.5h5.4l2.6-7.3 3.1 12.6 3-9.1 2 3.8H29"/>
+            <path class="brand-trace" d="M4 22.8l5.6-3 3.4 2.2 3.2-12.6 2.8 9 6.4-7.8"/>
+            <circle class="brand-node" cx="25.4" cy="10.6" r="2.6"/>
           </svg>
         </span>
         <span class="brand-text">

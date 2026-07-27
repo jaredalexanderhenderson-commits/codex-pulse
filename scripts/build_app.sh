@@ -40,6 +40,7 @@ chmod +x "$RESOURCES_DIR/install_update.sh"
 ICONSET="$TEMP_ROOT/AppIcon.iconset"
 mkdir -p "$ICONSET"
 clang -fobjc-arc -O2 -fmodules-cache-path="$MODULE_CACHE" \
+  -I "$PROJECT_ROOT/Sources" \
   "$PROJECT_ROOT/scripts/generate_icon.m" -framework AppKit -o "$TEMP_ROOT/generate_icon"
 "$TEMP_ROOT/generate_icon" "$ICONSET" "$RESOURCES_DIR/AppIcon.icns"
 

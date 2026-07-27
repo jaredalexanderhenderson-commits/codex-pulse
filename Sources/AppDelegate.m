@@ -1,4 +1,5 @@
 #import "AppDelegate.h"
+#import "CPBrandMark.h"
 #import "CPFileWatcher.h"
 #import "CPLogCollector.h"
 #import "CPPricingEngine.h"
@@ -18,6 +19,27 @@ static const CGFloat CPTitlebarHeight = 52.0;
 // system appearance, hence the fixed value rather than a dynamic provider.
 static NSColor *CPWindowBackgroundColor(void) {
     return [NSColor colorWithSRGBRed:0.875 green:0.898 blue:0.953 alpha:1.0];
+}
+
+// The brand mark as a menu-bar glyph. Marked as a template so AppKit tints it for
+// the current menu bar appearance and inverts it correctly when the item is
+// highlighted — which a coloured image would not do. The trace is drawn slightly
+// heavier than in the app icon because at 15pt a hairline disappears.
+static NSImage *CPStatusItemImage(void) {
+    // Integral point size; a fractional height renders soft on 1x displays.
+    NSSize size = NSMakeSize(21.0, 16.0);
+    NSImage *image = [NSImage imageWithSize:size flipped:NO drawingHandler:^BOOL(NSRect bounds) {
+        NSRect box = NSInsetRect(bounds, 0.5, 0.5);
+        NSBezierPath *trace = CPBrandMarkTrace(box);
+        trace.lineWidth = MAX(1.7, CPBrandMarkStrokeWidth(box) * 1.34);
+        [[NSColor blackColor] setStroke];
+        [trace stroke];
+        [[NSColor blackColor] setFill];
+        [CPBrandMarkNode(box) fill];
+        return YES;
+    }];
+    image.template = YES;
+    return image;
 }
 
 @interface CPWindowDragView : NSView
@@ -169,7 +191,8 @@ static NSColor *CPWindowBackgroundColor(void) {
 - (void)configureStatusItem {
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     NSStatusBarButton *button = self.statusItem.button;
-    button.image = [NSImage imageWithSystemSymbolName:@"sparkles" accessibilityDescription:@"Codex Pulse"];
+    button.image = CPStatusItemImage();
+    button.image.accessibilityDescription = @"Codex Pulse";
     button.title = @" --";
     button.toolTip = @"Codex Pulse";
 

@@ -1,5 +1,14 @@
 #import <Cocoa/Cocoa.h>
+#import "CPBrandMark.h"
 
+static NSBezierPath *Squircle(NSRect rect, CGFloat radius) {
+    return [NSBezierPath bezierPathWithRoundedRect:rect xRadius:radius yRadius:radius];
+}
+
+// Draws the app icon: the brand mark in white on a squircle carrying the same
+// accent-to-violet gradient and glass treatment as the dashboard. The previous
+// icon was a near-black purple tile inherited from the old dark theme, which no
+// longer matched anything in the app.
 static void DrawIcon(CGFloat size, NSString *path) {
     NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
         initWithBitmapDataPlanes:NULL
@@ -20,44 +29,72 @@ static void DrawIcon(CGFloat size, NSString *path) {
     [[NSColor clearColor] setFill];
     NSRectFill(canvas);
 
-    CGFloat inset = size * 0.055;
-    NSRect tile = NSInsetRect(canvas, inset, inset);
-    NSBezierPath *tilePath = [NSBezierPath bezierPathWithRoundedRect:tile xRadius:size * 0.225 yRadius:size * 0.225];
+    // macOS leaves roughly a tenth of the canvas as breathing room, and Big Sur
+    // onwards uses a squircle radius of about 0.2237 of the icon's edge.
+    NSRect tile = NSInsetRect(canvas, size * 0.085, size * 0.085);
+    CGFloat radius = size * 0.2237;
+    NSBezierPath *tilePath = Squircle(tile, radius);
+
+    // The dashboard's own pairing: --accent #3b5ce0 through to --violet #7c5cf0.
     NSGradient *tileGradient = [[NSGradient alloc] initWithColorsAndLocations:
-        [NSColor colorWithRed:0.08 green:0.055 blue:0.13 alpha:1.0], 0.0,
-        [NSColor colorWithRed:0.23 green:0.09 blue:0.42 alpha:1.0], 0.52,
-        [NSColor colorWithRed:0.48 green:0.18 blue:0.75 alpha:1.0], 1.0, nil];
-    [tileGradient drawInBezierPath:tilePath angle:55];
+        [NSColor colorWithSRGBRed:0.353 green:0.451 blue:0.980 alpha:1.0], 0.0,
+        [NSColor colorWithSRGBRed:0.278 green:0.376 blue:0.929 alpha:1.0], 0.48,
+        [NSColor colorWithSRGBRed:0.486 green:0.361 blue:0.941 alpha:1.0], 1.0, nil];
+    [tileGradient drawInBezierPath:tilePath angle:-62];
 
-    [[NSColor colorWithWhite:1 alpha:0.16] setStroke];
-    tilePath.lineWidth = MAX(1, size * 0.008);
-    [tilePath stroke];
-
-    NSRect glowRect = NSMakeRect(size * 0.19, size * 0.19, size * 0.62, size * 0.62);
-    NSBezierPath *glowPath = [NSBezierPath bezierPathWithOvalInRect:glowRect];
-    NSGradient *glowGradient = [[NSGradient alloc] initWithStartingColor:[NSColor colorWithRed:0.73 green:0.40 blue:1 alpha:0.40]
-                                                               endingColor:[NSColor colorWithRed:0.44 green:0.16 blue:0.78 alpha:0.01]];
-    [glowGradient drawInBezierPath:glowPath relativeCenterPosition:NSMakePoint(0, 0)];
-
+    // Glass highlights, clipped to the squircle. Linear rather than radial: a
+    // radial gradient fades out at its own bounding ellipse, which leaves a visible
+    // curved seam across the tile.
     [NSGraphicsContext saveGraphicsState];
-    NSAffineTransform *transform = [NSAffineTransform transform];
-    [transform translateXBy:size * 0.5 yBy:size * 0.5];
-    [transform rotateByDegrees:-26];
-    [transform translateXBy:-size * 0.5 yBy:-size * 0.5];
-    [transform concat];
-    NSRect orbitRect = NSMakeRect(size * 0.18, size * 0.31, size * 0.64, size * 0.38);
-    NSBezierPath *orbit = [NSBezierPath bezierPathWithOvalInRect:orbitRect];
-    [[NSColor colorWithRed:0.83 green:0.64 blue:1 alpha:0.9] setStroke];
-    orbit.lineWidth = MAX(1.2, size * 0.025);
-    [orbit stroke];
+    [tilePath addClip];
+
+    // Broad specular sweep in from the top-left, mirroring --glass-sheen.
+    NSGradient *sheen = [[NSGradient alloc] initWithColorsAndLocations:
+        [NSColor colorWithWhite:1 alpha:0.34], 0.0,
+        [NSColor colorWithWhite:1 alpha:0.06], 0.34,
+        [NSColor colorWithWhite:1 alpha:0.0], 0.58, nil];
+    [sheen drawInRect:tile angle:-58];
+
+    // A faint lift off the bottom edge so the lower half is lit, not just darker.
+    NSGradient *bounce = [[NSGradient alloc] initWithColorsAndLocations:
+        [NSColor colorWithWhite:1 alpha:0.13], 0.0,
+        [NSColor colorWithWhite:1 alpha:0.0], 0.26, nil];
+    [bounce drawInRect:tile angle:90];
+
     [NSGraphicsContext restoreGraphicsState];
 
-    CGFloat coreSize = size * 0.19;
-    NSRect coreRect = NSMakeRect((size - coreSize) / 2, (size - coreSize) / 2, coreSize, coreSize);
-    NSBezierPath *core = [NSBezierPath bezierPathWithOvalInRect:coreRect];
-    NSGradient *coreGradient = [[NSGradient alloc] initWithStartingColor:[NSColor whiteColor]
-                                                               endingColor:[NSColor colorWithRed:0.74 green:0.48 blue:1 alpha:1]];
-    [coreGradient drawInBezierPath:core angle:-45];
+    // Bevel rim, kept inside the tile's antialiased edge so it reads as a lit lip
+    // rather than an outline. Clipping to the ring between two squircles lets one
+    // vertical gradient run through it: bright at the crown, gone at the sides.
+    CGFloat lipWidth = MAX(1.0, size * 0.009);
+    NSRect lipRect = NSInsetRect(tile, lipWidth * 0.5, lipWidth * 0.5);
+    NSBezierPath *ring = [NSBezierPath bezierPath];
+    [ring appendBezierPath:Squircle(lipRect, radius - lipWidth * 0.5)];
+    [ring appendBezierPath:Squircle(NSInsetRect(lipRect, lipWidth, lipWidth), radius - lipWidth * 1.5)];
+    ring.windingRule = NSWindingRuleEvenOdd;
+
+    [NSGraphicsContext saveGraphicsState];
+    [ring addClip];
+    // angle:90 runs bottom-to-top, so location 0 is the bottom of the tile.
+    NSGradient *lipGradient = [[NSGradient alloc] initWithColorsAndLocations:
+        [NSColor colorWithWhite:1 alpha:0.16], 0.0,
+        [NSColor colorWithWhite:1 alpha:0.02], 0.42,
+        [NSColor colorWithWhite:1 alpha:0.52], 1.0, nil];
+    [lipGradient drawInRect:lipRect angle:90];
+    [NSGraphicsContext restoreGraphicsState];
+
+    // The mark, inset so it never crowds the squircle's corners, with a soft drop
+    // shadow to lift it off the glass.
+    NSRect markBox = NSInsetRect(tile, NSWidth(tile) * 0.185, NSHeight(tile) * 0.185);
+    CGContextRef cg = NSGraphicsContext.currentContext.CGContext;
+    CGContextSaveGState(cg);
+    CGContextSetShadowWithColor(cg, CGSizeMake(0, -size * 0.010), size * 0.026,
+                                [NSColor colorWithSRGBRed:0.05 green:0.08 blue:0.26 alpha:0.34].CGColor);
+    [[NSColor whiteColor] setStroke];
+    [CPBrandMarkTrace(markBox) stroke];
+    [[NSColor whiteColor] setFill];
+    [CPBrandMarkNode(markBox) fill];
+    CGContextRestoreGState(cg);
 
     [NSGraphicsContext restoreGraphicsState];
     NSData *png = [bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
