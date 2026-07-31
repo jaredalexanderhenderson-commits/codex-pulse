@@ -33,4 +33,5 @@ Codex Pulse checks the repository's latest public GitHub release shortly after l
 - Local event detail begins on June 1 and continues forward. The local ledger grows with retained history so it does not silently discard older usage.
 - Credits use the bundled dated OpenAI rate table.
 - Dollar amounts are API-equivalent estimates, not ChatGPT subscription charges.
+- Weekly remaining uses the complete seven-day rate-limit window. Shorter windows and incomplete events are ignored.
 - The pace projection divides the server-reported weekly-limit percentage by the fraction of the limit window that has elapsed. It is a linear extrapolation of the current rate, withheld until 8% of the window has passed, and is not a prediction from OpenAI.

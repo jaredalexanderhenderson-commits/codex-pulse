@@ -9,7 +9,8 @@ static double CPDouble(id value) {
     return [value respondsToSelector:@selector(doubleValue)] ? [value doubleValue] : 0.0;
 }
 
-static const NSInteger CPCollectorStateVersion = 3;
+static const NSInteger CPCollectorStateVersion = 4;
+static const double CPWeeklyWindowMinutes = 7.0 * 24.0 * 60.0;
 
 static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     NSString *needle = [NSString stringWithFormat:@"\"%@\"", key];
@@ -449,19 +450,34 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
 
 - (void)captureLatestLimitFromPayload:(NSDictionary *)payload timestamp:(NSString *)timestamp {
     NSDictionary *limits = [payload[@"rate_limits"] isKindOfClass:[NSDictionary class]] ? payload[@"rate_limits"] : nil;
-    NSDictionary *primary = [limits[@"primary"] isKindOfClass:[NSDictionary class]] ? limits[@"primary"] : nil;
-    if (!limits || !primary) { return; }
+    if (!limits) { return; }
+
+    // Codex can expose a short primary window and a weekly secondary window.
+    // Pick the seven-day window explicitly instead of assuming primary is the
+    // weekly allowance.
+    NSDictionary *weekly = nil;
+    for (NSString *key in @[@"primary", @"secondary"]) {
+        NSDictionary *candidate = [limits[key] isKindOfClass:[NSDictionary class]] ? limits[key] : nil;
+        BOOL complete = [candidate[@"used_percent"] respondsToSelector:@selector(doubleValue)]
+            && [candidate[@"resets_at"] respondsToSelector:@selector(doubleValue)];
+        if (complete && CPDouble(candidate[@"window_minutes"]) >= CPWeeklyWindowMinutes) {
+            weekly = candidate;
+            break;
+        }
+    }
+    if (!weekly) { return; }
 
     NSDate *candidate = [self dateFromISO:timestamp];
+    if (!candidate) { return; }
     NSDate *existing = [self dateFromISO:self.latestLimit[@"timestamp"]];
-    if (existing && candidate && [candidate compare:existing] != NSOrderedDescending) { return; }
+    if (existing && [candidate compare:existing] != NSOrderedDescending) { return; }
 
     NSDictionary *credits = [limits[@"credits"] isKindOfClass:[NSDictionary class]] ? limits[@"credits"] : @{};
     self.latestLimit = [@{
         @"timestamp": timestamp ?: @"",
-        @"usedPercent": primary[@"used_percent"] ?: @0,
-        @"windowMinutes": primary[@"window_minutes"] ?: @0,
-        @"resetsAt": primary[@"resets_at"] ?: @0,
+        @"usedPercent": weekly[@"used_percent"],
+        @"windowMinutes": weekly[@"window_minutes"],
+        @"resetsAt": weekly[@"resets_at"],
         @"planType": limits[@"plan_type"] ?: @"unknown",
         @"hasCredits": credits[@"has_credits"] ?: @NO,
         @"creditBalance": credits[@"balance"] ?: @"0"

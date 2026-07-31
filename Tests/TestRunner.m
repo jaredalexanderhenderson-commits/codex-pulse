@@ -88,7 +88,8 @@ int main(int argc, const char *argv[]) {
         Assert([tracked[@"sessionCount"] longLongValue] == 1, @"Session aggregation is stable");
         AssertNear([tracked[@"credits"] doubleValue], 0.405, 0.000001, @"Imported credit estimate is correct");
         AssertNear([tracked[@"apiCost"] doubleValue], 0.0162, 0.000001, @"Imported API-equivalent estimate is correct");
-        AssertNear([snapshot[@"limit"][@"usedPercent"] doubleValue], 42.0, 0.000001, @"Latest weekly-limit value wins");
+        AssertNear([snapshot[@"limit"][@"usedPercent"] doubleValue], 43.0, 0.000001, @"Seven-day limit wins over the short primary window");
+        Assert([snapshot[@"limit"][@"windowMinutes"] longLongValue] == 10080, @"Weekly limit keeps its seven-day window");
         NSDictionary *weeklySession = snapshot[@"periods"][@"weeklySession"];
         Assert([weeklySession[@"total"] longLongValue] == 0, @"Weekly session excludes usage before the active limit window");
         Assert([snapshot[@"daily"] count] == 50, @"Daily chart spans June 1 through today");
@@ -102,7 +103,7 @@ int main(int argc, const char *argv[]) {
         NSURL *fixtureURL = [fixtureRoot URLByAppendingPathComponent:@"sample-session.jsonl"];
         unsigned long long fixtureSize = [[NSFileManager defaultManager] attributesOfItemAtPath:fixtureURL.path error:nil].fileSize;
         NSDictionary *legacyState = @{
-            @"version": @1,
+            @"version": @3,
             @"trackingStart": @"2026-07-13T00:00:00.000Z",
             @"events": @[],
             @"checkpoints": @{ fixtureURL.path: @{ @"offset": @(fixtureSize) } },
@@ -117,7 +118,7 @@ int main(int argc, const char *argv[]) {
         NSDictionary *migratedSnapshot = RefreshSynchronously(migratedCollector);
         Assert([migratedSnapshot[@"periods"][@"tracked"][@"total"] longLongValue] == 2350, @"Legacy state re-imports June usage despite old checkpoints");
         NSDictionary *migratedState = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:legacyStateURL] options:0 error:nil];
-        Assert([migratedState[@"version"] integerValue] == 3, @"June timeline migration is persisted");
+        Assert([migratedState[@"version"] integerValue] == 4, @"Weekly limit migration is persisted");
 
         NSURL *boundedStateURL = [stateRoot URLByAppendingPathComponent:@"bounded-usage-store.json"];
         NSISO8601DateFormatter *eventFormatter = [NSISO8601DateFormatter new];
@@ -145,7 +146,7 @@ int main(int argc, const char *argv[]) {
             }];
         }
         NSDictionary *oversizedState = @{
-            @"version": @3,
+            @"version": @4,
             @"trackingStart": @"2026-07-01T00:00:00.000Z",
             @"events": storedEvents,
             @"checkpoints": @{},
