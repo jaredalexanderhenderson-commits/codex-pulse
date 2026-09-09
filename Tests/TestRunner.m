@@ -161,6 +161,9 @@ int main(int argc, const char *argv[]) {
                                                                                      now:ISODate(@"2026-07-20T12:00:00.000Z")];
         NSDictionary *boundedSnapshot = RefreshSynchronously(boundedCollector);
         Assert([boundedSnapshot[@"health"][@"eventsTracked"] longLongValue] == 25001, @"Collector retains more than 25,000 historical events");
+        Assert([boundedSnapshot[@"sessions"] count] == 1, @"Weekly chat list includes the active session");
+        NSDictionary *boundedChat = [(NSArray *)boundedSnapshot[@"sessions"] firstObject];
+        AssertNear([boundedChat[@"weeklyShare"] doubleValue], 100.0, 0.000001, @"Weekly chat share is calculated from weekly tokens");
         NSDictionary *savedBoundedState = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:boundedStateURL] options:0 error:nil];
         Assert([savedBoundedState[@"events"] count] == 25001, @"Collector persists the full event history");
 

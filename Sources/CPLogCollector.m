@@ -581,9 +581,15 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     return sorted.count > limit ? [sorted subarrayWithRange:NSMakeRange(0, limit)] : sorted;
 }
 
-- (NSArray *)recentSessions {
+- (NSArray *)recentSessionsSince:(NSDate *)cutoff weeklyTotal:(long long)weeklyTotal {
     NSMutableDictionary<NSString *, NSMutableDictionary *> *sessions = [NSMutableDictionary dictionary];
+    NSString *cutoffString = cutoff ? [self isoFromDate:cutoff] : nil;
     for (NSDictionary *event in self.events) {
+        NSString *timestamp = [event[@"timestamp"] isKindOfClass:[NSString class]] ? event[@"timestamp"] : @"";
+        // Session event timestamps are ISO-8601 and normalized by the collector,
+        // so a string comparison avoids another date parse for every event.
+        if (cutoffString && (!timestamp.length || [timestamp compare:cutoffString] == NSOrderedAscending)) { continue; }
+
         NSString *sessionID = event[@"sessionId"] ?: @"unknown";
         NSMutableDictionary *entry = sessions[sessionID];
         if (!entry) {
@@ -597,23 +603,30 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
                 @"tierLabel": event[@"tierLabel"] ?: event[@"serviceTier"] ?: @"standard",
                 @"total": @0LL,
                 @"credits": @0.0,
+                @"weeklyShare": @0.0,
                 @"lastTimestamp": event[@"timestamp"] ?: @""
             } mutableCopy];
             sessions[sessionID] = entry;
         }
         entry[@"total"] = @(CPLongLong(entry[@"total"]) + CPLongLong(event[@"total"]));
         entry[@"credits"] = @(CPDouble(entry[@"credits"]) + CPDouble(event[@"credits"]));
-        NSString *timestamp = event[@"timestamp"] ?: @"";
         if ([timestamp compare:entry[@"lastTimestamp"]] == NSOrderedDescending) {
             entry[@"lastTimestamp"] = timestamp;
             entry[@"model"] = event[@"model"] ?: entry[@"model"];
             entry[@"tierLabel"] = event[@"tierLabel"] ?: entry[@"tierLabel"];
         }
     }
+
+    for (NSMutableDictionary *entry in sessions.allValues) {
+        entry[@"weeklyShare"] = @(weeklyTotal > 0
+            ? (100.0 * CPLongLong(entry[@"total"]) / (double)weeklyTotal)
+            : 0.0);
+    }
+
     NSArray *sorted = [[sessions allValues] sortedArrayUsingComparator:^NSComparisonResult(NSDictionary *left, NSDictionary *right) {
         return [right[@"lastTimestamp"] compare:left[@"lastTimestamp"]];
     }];
-    return sorted.count > 8 ? [sorted subarrayWithRange:NSMakeRange(0, 8)] : sorted;
+    return sorted;
 }
 
 - (NSDictionary *)buildSnapshot {
@@ -639,7 +652,10 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
         @"daily": [self dailySeriesFrom:chartStart now:now],
         @"models": [self groupedTotalsForKey:@"model" limit:6],
         @"origins": [self groupedTotalsForKey:@"originator" limit:6],
-        @"sessions": [self recentSessions],
+        // Chat rows are scoped to the same current weekly window as the headline
+        // total, so their shares explain where this week's usage went.
+        @"sessions": [self recentSessionsSince:[self weeklySessionStartForDate:now]
+                                      weeklyTotal:CPLongLong(weeklySession[@"total"])],
         @"limit": self.latestLimit ?: @{},
         @"health": @{
             @"filesTracked": @(self.checkpoints.count),

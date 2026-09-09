@@ -1,6 +1,6 @@
 # Codex Pulse
 
-Codex Pulse is a private, local macOS token dashboard for Codex Desktop and CLI sessions. It appears in both the Dock and the menu bar, has a draggable glass toolbar, and presents raw token counts, estimated Codex credits and API-equivalent cost, the current server-reported weekly-limit percentage remaining, and how that limit is pacing against the window. The interface uses a light "liquid glass" theme and does not follow the system appearance.
+Codex Pulse is a private, local macOS token dashboard for Codex Desktop and CLI sessions. It appears in both the Dock and the menu bar, has a draggable glass toolbar, and presents raw token counts, estimated Codex credits and API-equivalent cost, the current server-reported weekly-limit percentage remaining, how that limit is pacing against the window, and live weekly token totals by chat with each chat's share of weekly usage. The interface uses a light "liquid glass" theme and does not follow the system appearance.
 
 ## Privacy boundary
 
@@ -34,4 +34,5 @@ Codex Pulse checks the repository's latest public GitHub release shortly after l
 - Credits use the bundled dated OpenAI rate table.
 - Dollar amounts are API-equivalent estimates, not ChatGPT subscription charges.
 - Weekly remaining uses the complete seven-day rate-limit window. Shorter windows and incomplete events are ignored.
-- The pace projection divides the server-reported weekly-limit percentage by the fraction of the limit window that has elapsed. It is a linear extrapolation of the current rate, withheld until 8% of the window has passed, and is not a prediction from OpenAI.
+- The Active chats panel uses the same current seven-day window and reports each chat's raw tokens plus its percentage of the week's tracked tokens.
+- The pace projection divides the server-reported weekly-limit percentage by the fraction of the limit window that has elapsed. It is a linear extrapolation of the current rate; non-zero usage is shown early as an explicitly provisional estimate and becomes stable-labelled after 8% of the window has passed. It is not a prediction from OpenAI.

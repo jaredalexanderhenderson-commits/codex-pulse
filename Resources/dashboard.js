@@ -81,7 +81,6 @@
     const aggregate = currentAggregate();
     setText('total-tokens', compact(aggregate.total));
     setText('input-tokens', compact(aggregate.input));
-    setText('cached-tokens', compact(aggregate.cached));
     setText('output-tokens', compact(aggregate.output));
     setText('token-sessions', decimal(aggregate.sessionCount, 0));
     setText('token-events', decimal(aggregate.eventCount, 0));
@@ -102,7 +101,6 @@
   // selected period so the rail moves with the segmented control.
   function renderRail(aggregate) {
     const total = num(aggregate.total);
-    const input = num(aggregate.input);
     const output = num(aggregate.output);
     const events = num(aggregate.eventCount);
     const sessions = num(aggregate.sessionCount);
@@ -110,7 +108,6 @@
 
     setText('rail-per-call', events ? compact(total / events) : '—');
     setText('rail-calls-session', sessions ? decimal(events / sessions, 1) : '—');
-    setText('rail-cache', input ? `${(100 * num(aggregate.cached) / input).toFixed(1)}%` : '—');
     setText('rail-reasoning', output ? `${(100 * num(aggregate.reasoning) / output).toFixed(1)}%` : '—');
     setText('rail-output', total ? `${(100 * output / total).toFixed(1)}%` : '—');
     setText('rail-rate', total && cost ? money(cost / total * 1e6) : '—');
@@ -140,18 +137,22 @@
   }
 
   // Compares how much of the weekly limit is gone against how much of the window
-  // has elapsed, then extrapolates the current rate out to the reset. The
-  // projection is deliberately withheld early in a window, where dividing by a
-  // tiny elapsed fraction produces a meaningless number.
+  // has elapsed, then extrapolates the current rate out to the reset. Early
+  // projections are useful when usage is already non-zero, but are labelled as
+  // provisional because a short burst can make the linear estimate volatile.
   function renderPace() {
     const limit = snapshot?.limit || {};
     const windowSeconds = num(limit.windowMinutes) * 60;
     const used = Math.max(0, Math.min(100, num(limit.usedPercent)));
-    const remainingSeconds = Math.max(0, num(limit.resetsAt) - Date.now() / 1000);
-    const elapsed = windowSeconds > 0
-      ? Math.max(0, Math.min(1, (windowSeconds - remainingSeconds) / windowSeconds))
+    const resetAt = num(limit.resetsAt);
+    const windowStart = resetAt - windowSeconds;
+    const elapsed = windowSeconds > 0 && resetAt > 0
+      ? Math.max(0, Math.min(1, (Date.now() / 1000 - windowStart) / windowSeconds))
       : 0;
-    const canProject = windowSeconds > 0 && elapsed >= 0.08;
+    const hasUsage = used > 0;
+    const hasElapsed = windowSeconds > 0 && resetAt > 0 && elapsed > 0;
+    const enoughTimeForStableProjection = elapsed >= 0.08;
+    const canProject = hasElapsed && (enoughTimeForStableProjection || hasUsage);
     const projected = canProject ? used / elapsed : 0;
 
     const pace = document.querySelector('.pace');
@@ -179,7 +180,15 @@
     if (!canProject) {
       verdict.textContent = 'Early';
       verdict.className = 'chip chip-mute';
-      setText('pace-note', `Only ${(100 * elapsed).toFixed(0)}% of the window has elapsed — too early to project a rate.`);
+      setText('pace-note', resetAt > 0
+        ? `Only ${(100 * elapsed).toFixed(0)}% of the window has elapsed — waiting for usage or a larger sample.`
+        : 'Waiting for a valid weekly reset timestamp.');
+      return;
+    }
+    if (!enoughTimeForStableProjection) {
+      verdict.textContent = 'Early sample';
+      verdict.className = 'chip chip-mute';
+      setText('pace-note', `${used.toFixed(0)}% used after ${(100 * elapsed).toFixed(1)}% of the window. Current run rate projects ${Math.min(999, projected).toFixed(0)}% by reset; this estimate stabilizes as more of the week passes.`);
       return;
     }
     if (projected > 100) {
@@ -337,12 +346,17 @@
 
   function renderSessions() {
     const sessions = snapshot?.sessions || [];
+    const weeklyTotal = num(snapshot?.periods?.weeklySession?.total);
+    setText('chat-subtitle', weeklyTotal
+      ? `${compact(weeklyTotal)} tokens across ${decimal(sessions.length, 0)} chat${sessions.length === 1 ? '' : 's'} this week`
+      : 'No chat usage in the current week yet');
     $('session-list').innerHTML = sessions.length ? sessions.map((session) => `
       <div class="session-row">
-        <div class="session-cell"><strong>${escapeHTML(session.project)}</strong><small>${escapeHTML(session.originator)}</small></div>
+        <div class="session-cell"><strong>${escapeHTML(session.project)}</strong><small>${escapeHTML(session.originator)} · ${escapeHTML(relativeTime(session.lastTimestamp))}</small></div>
         <div class="session-cell"><strong>${escapeHTML(session.model)}</strong><small>${escapeHTML(session.tierLabel)}</small></div>
         <div class="session-total">${compact(session.total)}</div>
-      </div>`).join('') : '<div class="empty-state">Waiting for a local Codex session.</div>';
+        <div class="session-share">${num(session.weeklyShare).toFixed(1)}%</div>
+      </div>`).join('') : '<div class="empty-state">Waiting for a chat to use tokens this week.</div>';
   }
 
   function escapeHTML(value) {
@@ -445,5 +459,9 @@
   bindChartHover();
   positionThumb();
   window.addEventListener('resize', positionThumb);
-  setInterval(() => { if (snapshot) setText('last-updated', relativeTime(snapshot.generatedAt)); }, 15_000);
+  setInterval(() => {
+    if (!snapshot) return;
+    setText('last-updated', relativeTime(snapshot.generatedAt));
+    renderPace();
+  }, 15_000);
 })();

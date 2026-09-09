@@ -57,7 +57,7 @@
       <article class="card stat glass">
         <div class="stat-top">
           <div class="stat-id">
-            <p class="stat-label">Raw tokens</p>
+            <p class="stat-label">Tokens used</p>
             <p class="stat-value" id="total-tokens">—</p>
           </div>
           <span class="stat-icon tone-blue">
@@ -68,7 +68,6 @@
         <div class="stat-foot">
           <div class="chiplet-row">
             <div class="chiplet"><span>Input</span><strong id="input-tokens">—</strong></div>
-            <div class="chiplet"><span>Cached</span><strong id="cached-tokens">—</strong></div>
             <div class="chiplet"><span>Output</span><strong id="output-tokens">—</strong></div>
           </div>
         </div>
@@ -134,11 +133,6 @@
         <p class="rail-note">turns before you move on</p>
       </div>
       <div class="rail-cell">
-        <p class="rail-label">Cache hit rate</p>
-        <p class="rail-value" id="rail-cache">—</p>
-        <p class="rail-note">of input served from cache</p>
-      </div>
-      <div class="rail-cell">
         <p class="rail-label">Reasoning share</p>
         <p class="rail-value" id="rail-reasoning">—</p>
         <p class="rail-note">of output spent thinking</p>
@@ -162,7 +156,7 @@
             <h2>Token flow</h2>
             <p id="trend-subtitle">Daily tokens since local tracking began</p>
           </div>
-          <div class="legend"><i></i> Raw tokens</div>
+          <div class="legend"><i></i> Tokens used</div>
         </div>
         <div class="chart" id="chart">
           <svg id="trend-chart" viewBox="0 0 720 210" preserveAspectRatio="none" aria-label="Seven-day token chart"></svg>
@@ -204,7 +198,7 @@
         <div class="panel-head">
           <div>
             <h2>Where the tokens went</h2>
-            <p>Top models by raw tokens</p>
+            <p>Top models by tokens used</p>
           </div>
         </div>
         <div id="model-list" class="model-list"></div>
@@ -213,15 +207,16 @@
       <article class="card panel glass">
         <div class="panel-head">
           <div>
-            <h2>Local Codex sessions</h2>
-            <p>Most recent activity on this Mac</p>
+            <h2>Active chats</h2>
+            <p id="chat-subtitle">Live token burn in the current week</p>
           </div>
-          <span class="chip chip-good">Metadata only</span>
+          <span class="chip chip-good">Live</span>
         </div>
         <div class="session-head">
-          <span>Project</span>
+          <span>Chat</span>
           <span>Model</span>
           <span>Tokens</span>
+          <span title="Share of this week's tracked tokens">% of week</span>
         </div>
         <div id="session-list" class="session-list"></div>
       </article>
