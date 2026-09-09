@@ -144,6 +144,21 @@ static NSString *CPJSONStringValue(NSString *line, NSString *key) {
     for (NSDictionary *event in storedEvents) {
         if (![event isKindOfClass:[NSDictionary class]]) { continue; }
         NSMutableDictionary *mutableEvent = [event mutableCopy];
+        // Newly supported models may already be in the ledger with zero estimates.
+        if (![event[@"pricingKnown"] boolValue]) {
+            NSDictionary *estimate = [self.pricingEngine estimateForModel:event[@"model"]
+                                                               serviceTier:event[@"serviceTier"]
+                                                               inputTokens:CPLongLong(event[@"input"])
+                                                              cachedTokens:CPLongLong(event[@"cached"])
+                                                              outputTokens:CPLongLong(event[@"output"])];
+            if ([estimate[@"known"] boolValue]) {
+                mutableEvent[@"credits"] = estimate[@"credits"];
+                mutableEvent[@"apiCost"] = estimate[@"apiCost"];
+                mutableEvent[@"tierLabel"] = estimate[@"tierLabel"];
+                mutableEvent[@"pricingKnown"] = @YES;
+                self.stateDirty = YES;
+            }
+        }
         [self.events addObject:mutableEvent];
         NSString *key = mutableEvent[@"key"];
         if (key.length) { [self.eventKeys addObject:key]; }

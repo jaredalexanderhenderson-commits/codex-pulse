@@ -61,6 +61,18 @@ int main(int argc, const char *argv[]) {
         AssertNear([estimate[@"credits"] doubleValue], 143.75, 0.000001, @"Credits exclude cached input from uncached input");
         AssertNear([estimate[@"apiCost"] doubleValue], 5.75, 0.000001, @"API-equivalent cost uses token-type rates");
 
+        for (NSString *model in @[@"gpt-6-astra", @"gpt-6", @"GPT-6-ASTRA"]) {
+            for (NSString *tier in @[@"standard", @"fast", @"priority"]) {
+                NSDictionary *astra = [pricing estimateForModel:model serviceTier:tier
+                                                     inputTokens:200000 cachedTokens:100000 outputTokens:20000];
+                BOOL fast = [tier isEqualToString:@"fast"];
+                BOOL accelerated = fast || [tier isEqualToString:@"priority"];
+                Assert([astra[@"known"] boolValue] && [astra[@"hasAPIPrice"] boolValue], @"Astra aliases have credit and API rates");
+                AssertNear([astra[@"credits"] doubleValue], fast ? 131.25 : 52.5, 0.000001, @"Astra credits account for caching and Fast mode");
+                AssertNear([astra[@"apiCost"] doubleValue], accelerated ? 4.2 : 2.1, 0.000001, @"Astra API acceleration uses its separate multiplier");
+            }
+        }
+
         NSDictionary *unknown = [pricing estimateForModel:@"future-model"
                                               serviceTier:@"standard"
                                               inputTokens:1000
@@ -98,6 +110,24 @@ int main(int argc, const char *argv[]) {
         NSDictionary *secondTracked = secondSnapshot[@"periods"][@"tracked"];
         Assert([secondTracked[@"eventCount"] longLongValue] == 3, @"A second refresh does not duplicate events");
         Assert([secondTracked[@"total"] longLongValue] == 2350, @"Checkpoint refresh preserves totals");
+
+        NSURL *astraStateURL = [stateRoot URLByAppendingPathComponent:@"astra-usage-store.json"];
+        NSDictionary *astraState = @{
+            @"version": @4, @"trackingStart": @"2026-06-01T00:00:00.000Z",
+            @"events": @[@{ @"key": @"astra-event", @"timestamp": @"2026-07-19T12:00:00.000Z",
+                           @"sessionId": @"astra-session", @"model": @"gpt-6-astra", @"serviceTier": @"standard",
+                           @"input": @200000, @"cached": @100000, @"output": @20000, @"total": @220000,
+                           @"credits": @0, @"apiCost": @0, @"pricingKnown": @NO }],
+            @"checkpoints": @{}, @"latestLimit": @{}
+        };
+        [[NSJSONSerialization dataWithJSONObject:astraState options:0 error:nil] writeToURL:astraStateURL atomically:YES];
+        CPLogCollector *astraCollector = [[CPLogCollector alloc] initWithSessionRoots:@[] stateURL:astraStateURL
+                                                                     pricingEngine:pricing now:ISODate(@"2026-07-20T12:00:00.000Z")];
+        NSDictionary *astraSnapshot = RefreshSynchronously(astraCollector);
+        AssertNear([astraSnapshot[@"periods"][@"tracked"][@"credits"] doubleValue], 52.5, 0.000001, @"Previously unpriced Astra history gains credits");
+        AssertNear([astraSnapshot[@"periods"][@"tracked"][@"apiCost"] doubleValue], 2.1, 0.000001, @"Previously unpriced Astra history gains API cost");
+        NSDictionary *savedAstra = [NSJSONSerialization JSONObjectWithData:[NSData dataWithContentsOfURL:astraStateURL] options:0 error:nil];
+        Assert([savedAstra[@"events"][0][@"pricingKnown"] boolValue], @"Repriced history is persisted");
 
         NSURL *legacyStateURL = [stateRoot URLByAppendingPathComponent:@"legacy-usage-store.json"];
         NSURL *fixtureURL = [fixtureRoot URLByAppendingPathComponent:@"sample-session.jsonl"];

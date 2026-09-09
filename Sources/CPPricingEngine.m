@@ -27,6 +27,7 @@
 - (NSString *)normalizedModel:(NSString *)model {
     NSString *normalized = model.lowercaseString;
     NSDictionary *aliases = @{
+        @"gpt-6": @"gpt-6-astra",
         @"gpt-5.6": @"gpt-5.6-sol",
         @"gpt-5.4-mini": @"gpt-5.4-mini",
         @"gpt-5.3-codex-spark": @"gpt-5.3-codex-spark"
@@ -64,20 +65,21 @@
     double apiMultiplier = 1.0;
     NSString *tier = serviceTier.lowercaseString ?: @"standard";
     NSString *tierLabel = tier.length ? tier : @"standard";
+    BOOL isAstra = [normalized isEqualToString:@"gpt-6-astra"];
 
     if ([tier isEqualToString:@"fast"]) {
-        if ([normalized hasPrefix:@"gpt-5.6"] || [normalized hasPrefix:@"gpt-5.5"]) {
+        if (isAstra || [normalized hasPrefix:@"gpt-5.6"] || [normalized hasPrefix:@"gpt-5.5"]) {
             creditMultiplier = 2.5;
         } else if ([normalized hasPrefix:@"gpt-5.4"]) {
             creditMultiplier = 2.0;
         }
-        apiMultiplier = creditMultiplier;
+        apiMultiplier = isAstra ? 2.0 : creditMultiplier;
         tierLabel = [NSString stringWithFormat:@"Fast x%.1f", creditMultiplier];
     } else if ([tier isEqualToString:@"priority"]) {
         // Codex records the selected priority tier. Official API-equivalent pricing
-        // for GPT-5.6 Priority processing is 2x Standard. Credit rates remain the
+        // for Astra and GPT-5.6 Priority processing is 2x Standard. Credit rates remain the
         // published base estimate because Priority and ChatGPT Fast are not identical.
-        apiMultiplier = [normalized hasPrefix:@"gpt-5.6"] ? 2.0 : 1.0;
+        apiMultiplier = (isAstra || [normalized hasPrefix:@"gpt-5.6"]) ? 2.0 : 1.0;
         tierLabel = apiMultiplier > 1.0 ? @"Priority · API x2" : @"Priority";
     }
 

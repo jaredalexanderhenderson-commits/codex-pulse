@@ -1,9 +1,14 @@
 {
   "version": 1,
-  "published": "2026-07-15",
-  "source": "https://help.openai.com/en/articles/20001106-codex-rate-card",
+  "published": "2026-09-09",
+  "source": "https://developers.openai.com/codex/pricing",
   "apiSource": "https://developers.openai.com/api/docs/models",
   "models": {
+    "gpt-6-astra": {
+      "displayName": "GPT-6 Astra",
+      "credits": { "input": 250.0, "cachedInput": 25.0, "output": 1250.0 },
+      "apiUSD": { "input": 10.0, "cachedInput": 1.0, "output": 50.0 }
+    },
     "gpt-5.6-sol": {
       "displayName": "GPT-5.6 Sol",
       "credits": { "input": 125.0, "cachedInput": 12.5, "output": 750.0 },
