@@ -434,28 +434,6 @@
   $('reveal-data').addEventListener('click', () => post('revealData'));
   $('open-pricing').addEventListener('click', () => post('openPricing'));
   window.addEventListener('keydown', (event) => { if (event.key === 'Escape') setDrawer(false); });
-  // Feeds the pointer position to each pane's specular bloom. CSS handles showing
-  // and hiding it on :hover, so this only ever writes two custom properties, and
-  // coalesces to one write per frame.
-  function bindSpecular() {
-    let pending = null;
-    let scheduled = false;
-    document.addEventListener('pointermove', (event) => {
-      const card = event.target.closest?.('.card');
-      if (!card) return;
-      pending = { card, x: event.clientX, y: event.clientY };
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
-        const bounds = pending.card.getBoundingClientRect();
-        pending.card.style.setProperty('--mx', `${pending.x - bounds.left}px`);
-        pending.card.style.setProperty('--my', `${pending.y - bounds.top}px`);
-      });
-    }, { passive: true });
-  }
-
-  bindSpecular();
   bindChartHover();
   positionThumb();
   window.addEventListener('resize', positionThumb);

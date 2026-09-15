@@ -18,7 +18,7 @@ static const CGFloat CPTitlebarHeight = 52.0;
 // page is about to contradict. The dashboard is light-only and does not follow the
 // system appearance, hence the fixed value rather than a dynamic provider.
 static NSColor *CPWindowBackgroundColor(void) {
-    return [NSColor colorWithSRGBRed:0.875 green:0.898 blue:0.953 alpha:1.0];
+    return [NSColor colorWithSRGBRed:0.812 green:0.847 blue:0.933 alpha:1.0];
 }
 
 // The brand mark as a menu-bar glyph. Marked as a template so AppKit tints it for

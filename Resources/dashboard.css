@@ -1,15 +1,10 @@
 /* ==========================================================================
-   Codex Pulse — liquid glass design system
+   Codex Pulse — restrained glass design system
 
-   Light-only by design; the dashboard does not follow the system appearance.
-
-   WebKit does not support `backdrop-filter: url(#svgFilter)`, so the refraction
-   used by displacement-map liquid glass libraries is unavailable in WKWebView.
-   The glass here is assembled from primitives WebKit does support: a real backdrop
-   blur with a saturation lift, a frosted bevel lip, a masked specular rim, two
-   sheen highlights, an inner vignette, a five-stop elevation ramp, and a
-   pointer-tracked specular bloom. A saturated colour wash sits behind everything
-   so the blur has something to bend — see `--wash`.
+   The canvas is the content layer. Cards use a quiet translucent material, while
+   navigation and controls carry the clearer, brighter glass treatment. This
+   keeps the hierarchy legible and avoids fake refraction, chromatic fringes, and
+   moving colour effects that compete with the data.
    ========================================================================== */
 
 :root {
@@ -18,8 +13,8 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
 
-  --radius-lg: 24px;
-  --radius-md: 15px;
+  --radius-lg: 22px;
+  --radius-md: 14px;
   --radius-sm: 11px;
   --gap: 16px;
   --titlebar-h: 52px;
@@ -39,86 +34,52 @@
   --dur-smooth: .4s;
   --dur-travel: .55s;
 
-  --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 170 170' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
-
   /* --- light theme ------------------------------------------------------- */
-  /* The wash is what the glass has to bend. It is deliberately saturated and
-     overlapping: every pane should sit over a colour gradient rather than a flat
-     field, otherwise the blur has nothing to reveal and the panes read as paint.
-     Resist adding white veils here — they lighten but also desaturate, which is
-     exactly the "flat paint" failure this is meant to avoid. */
   --canvas: #cfd8ee;
-  --wash:
-    radial-gradient(960px 780px at -4% -16%, rgba(48, 92, 252, .80), transparent 58%),
-    radial-gradient(820px 700px at 104% 2%, rgba(0, 214, 198, .66), transparent 54%),
-    radial-gradient(780px 720px at 4% 106%, rgba(255, 118, 88, .58), transparent 54%),
-    radial-gradient(880px 780px at 100% 98%, rgba(140, 98, 255, .68), transparent 56%),
-    radial-gradient(1140px 840px at 54% 48%, rgba(86, 124, 255, .30), transparent 66%);
+  --ink: #171a21;
+  --ink-2: #333844;
+  --ink-3: #525966;
+  --ink-4: #707784;
 
-  /* Tuned against the *tinted* pane interiors, not plain white — the wash lifts
-     pane luminance to roughly 0.82–0.86, so the lower two steps have to sit
-     darker than they would on a flat background to clear 4.5:1 at 10px. */
-  --ink: #101420;
-  --ink-2: #333a4d;
-  --ink-3: #4e5670;
-  --ink-4: #636b82;
+  --accent: #4769e8;
+  --accent-ink: #3152cf;
+  --violet: #765fe6;
+  --teal: #158f8a;
+  --amber: #a96b12;
+  --rose: #cf4663;
+  --green: #14845f;
 
-  --accent: #3b5ce0;
-  --accent-ink: #2c46b8;
-  --violet: #7c5cf0;
-  --teal: #109a92;
-  --amber: #b57314;
-  --rose: #d94a68;
-  --green: #12916a;
-
-  --glass-body: linear-gradient(180deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .15));
-  /* Two highlights: a broad diagonal sweep, plus a tighter pool at the top edge
-     where a light source directly above would strike the bevel. */
-  --glass-sheen:
-    radial-gradient(120% 70% at 42% -14%, rgba(255, 255, 255, .70), transparent 62%),
-    linear-gradient(147deg, rgba(255, 255, 255, .52) 0%, rgba(255, 255, 255, .06) 34%, rgba(255, 255, 255, 0) 52%);
-  --glass-filter: blur(44px) saturate(280%) brightness(1.05) contrast(1.05);
-  --glass-crown: rgba(255, 255, 255, 1);
-  --glass-bounce: rgba(255, 255, 255, .60);
-  --glass-lip: rgba(255, 255, 255, .30);
-  --glass-lip-shade: rgba(74, 94, 152, .16);
-  --glass-depth: rgba(80, 100, 158, .26);
-  --glass-lens:
-    rgba(255, 255, 255, .18), rgba(196, 218, 255, .08) 38%, transparent 68%;
-  --rim: linear-gradient(145deg,
-      rgba(255, 255, 255, 1) 0%,
-      rgba(255, 255, 255, .52) 16%,
-      rgba(255, 255, 255, .06) 38%,
-      rgba(255, 255, 255, 0) 52%,
-      rgba(255, 255, 255, .26) 68%,
-      rgba(255, 255, 255, .74) 88%,
-      rgba(255, 255, 255, 1) 100%);
-  --hairline: rgba(20, 26, 48, .09);
+  --glass-body: linear-gradient(145deg, rgba(255, 255, 255, .60), rgba(255, 255, 255, .27) 58%, rgba(255, 255, 255, .18));
+  --glass-filter: blur(34px) saturate(150%) brightness(1.04);
+  --glass-rim: linear-gradient(145deg,
+      rgba(255, 255, 255, .94),
+      rgba(255, 255, 255, .46) 34%,
+      rgba(255, 255, 255, .20) 68%,
+      rgba(255, 255, 255, .62));
+  --glass-crown: rgba(255, 255, 255, .86);
+  --hairline: rgba(34, 42, 58, .10);
   --hairline-soft: rgba(20, 26, 48, .06);
-  /* Five stops: a tight contact shadow through to a wide ambient one, so panes
-     read as lifted off the wash rather than pasted onto it. */
   --elevation:
-    0 1px 1.5px rgba(18, 22, 40, .05),
-    0 3px 6px -2px rgba(18, 22, 40, .07),
-    0 10px 20px -8px rgba(18, 22, 40, .10),
-    0 26px 48px -20px rgba(18, 22, 40, .15),
-    0 52px 92px -44px rgba(18, 22, 40, .22);
+    0 1px 2px rgba(31, 42, 66, .07),
+    0 12px 30px -14px rgba(31, 42, 66, .18),
+    0 30px 64px -34px rgba(31, 42, 66, .18);
 
-  --inset-fill: rgba(255, 255, 255, .48);
-  --inset-line: rgba(255, 255, 255, .72);
-  --track: rgba(20, 26, 48, .09);
-  --shadow-color: 18, 22, 40;
+  --inset-fill: linear-gradient(180deg, rgba(255, 255, 255, .58), rgba(255, 255, 255, .30));
+  --inset-fill-hover: linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(255, 255, 255, .42));
+  --inset-line: rgba(255, 255, 255, .66);
+  --inset-filter: blur(14px) saturate(135%);
+  --inset-shadow:
+    inset 0 0 0 1px var(--inset-line),
+    inset 0 1px 0 rgba(255, 255, 255, .72),
+    0 3px 12px -8px rgba(31, 42, 66, .20);
+  --track: rgba(49, 59, 78, .10);
+  --shadow-color: 31, 42, 66;
 }
 
 * { box-sizing: border-box; }
 
 html, body { min-height: 100%; margin: 0; }
 
-/* The ambient colour field lives entirely in the root background: soft radial
-   gradients plus a soft-light grain layer, all `background-attachment: fixed`.
-   Painting it here rather than in fixed-position blurred `filter` layers keeps one
-   stable compositing layer behind the glass, so every pane samples the same
-   backdrop and no blur passes are duplicated per element. */
 body {
   overflow-x: hidden;
   color: var(--ink);
@@ -126,64 +87,44 @@ body {
   letter-spacing: -.003em;
   -webkit-font-smoothing: antialiased;
   background-color: var(--canvas);
-  background-image: var(--grain), var(--wash);
-  background-blend-mode: soft-light, normal, normal, normal, normal, normal;
+  background-image:
+    radial-gradient(960px 780px at -4% -16%, rgba(48, 92, 252, .80), transparent 58%),
+    radial-gradient(820px 700px at 104% 2%, rgba(0, 214, 198, .66), transparent 54%),
+    radial-gradient(780px 720px at 4% 106%, rgba(255, 118, 88, .58), transparent 54%),
+    radial-gradient(880px 780px at 100% 98%, rgba(140, 98, 255, .68), transparent 56%),
+    radial-gradient(1140px 840px at 54% 48%, rgba(86, 124, 255, .30), transparent 66%);
   background-attachment: fixed;
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-  background-size: 170px 170px, auto, auto, auto, auto, auto;
+  background-repeat: no-repeat;
 }
 
 button { font: inherit; color: inherit; }
 h1, h2, h3, p { margin: 0; }
 
-::-webkit-scrollbar { width: 11px; height: 11px; }
-::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 8px;
-  background-clip: content-box;
-  background-color: rgba(var(--shadow-color), .22);
-}
-::-webkit-scrollbar-thumb:hover { background-color: rgba(var(--shadow-color), .34); }
-
 /* --- the glass primitive -------------------------------------------------- */
 
-/* Five stacked cues stand in for the refraction WebKit cannot do:
-   1. the backdrop blur + saturation lift (the material itself),
-   2. a frosted inner lip with a soft shade beneath it — the bevel that reads as
-      the slab having real thickness,
-   3. a variable-width lit rim over that lip, brightest where light hits (::before),
-   4. an inner vignette so the body falls off toward its edges,
-   5. a specular bloom that tracks the pointer (::after), like Apple's glass
-      catching a highlight as it moves under your cursor. */
 .glass {
-  --lens: 0;
-  --mx: 50%;
-  --my: 0%;
   position: relative;
   border-radius: var(--radius-lg);
-  background-image: var(--glass-sheen), var(--glass-body);
+  background: var(--glass-body);
   -webkit-backdrop-filter: var(--glass-filter);
   backdrop-filter: var(--glass-filter);
   box-shadow:
-    inset 0 0 0 1px var(--hairline),
-    inset 0 0 0 2px var(--glass-lip),
-    inset 0 2.5px 5px -3px var(--glass-lip-shade),
-    inset 0 1.5px 0 -0.5px var(--glass-crown),
-    inset 0 -1.5px 0 -0.5px var(--glass-bounce),
-    inset 0 0 30px -12px var(--glass-depth),
+    inset 0 1px 0 var(--glass-crown),
+    inset 0 -1px 0 rgba(255, 255, 255, .26),
+    inset 0 0 0 1px rgba(43, 52, 70, .07),
     var(--elevation);
 }
 
-/* Masked specular rim: the lit edge of a thick glass slab. Sits above content on
-   purpose — it is the boundary of the pane, not decoration. */
+/* One neutral, light-responsive rim gives the surface definition. It contains no
+   baked-in colour, so corners never turn orange or cyan. */
 .glass::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 3;
-  padding: 1.25px;
+  padding: 1px;
   border-radius: inherit;
-  background: var(--rim);
+  background: var(--glass-rim);
   -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
@@ -191,43 +132,21 @@ h1, h2, h3, p { margin: 0; }
   pointer-events: none;
 }
 
-/* Pointer-tracked specular bloom. Kept low-alpha so it brightens the pane
-   without washing out the text it passes over. */
-.glass::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  opacity: var(--lens);
-  background: radial-gradient(ellipse 360px 240px at var(--mx) var(--my), var(--glass-lens));
-  transition: opacity .55s var(--ease-soft);
-  pointer-events: none;
-}
-
-/* Panes rise a touch under the cursor and take a deeper shadow with them, so the
-   specular bloom reads as light catching something that actually moved. */
-.card {
-  transition:
-    transform var(--dur-smooth) var(--ease-spring),
-    box-shadow var(--dur-smooth) var(--ease-soft);
-}
-
-.card:hover {
-  --lens: .48;
-  transform: translate3d(0, -2px, 0);
-  box-shadow:
-    inset 0 0 0 1px var(--hairline),
-    inset 0 0 0 2px var(--glass-lip),
-    inset 0 2.5px 5px -3px var(--glass-lip-shade),
-    inset 0 1.5px 0 -0.5px var(--glass-crown),
-    inset 0 -1.5px 0 -0.5px var(--glass-bounce),
-    inset 0 0 30px -12px var(--glass-depth),
-    0 1px 1.5px rgba(18, 22, 40, .05),
-    0 5px 10px -3px rgba(18, 22, 40, .08),
-    0 16px 28px -10px rgba(18, 22, 40, .12),
-    0 34px 60px -22px rgba(18, 22, 40, .17),
-    0 64px 108px -46px rgba(18, 22, 40, .24);
+/* Interactive controls receive the clearer glass treatment; data panels remain
+   stable under the pointer instead of pretending every surface is a button. */
+.live,
+.ghost-button,
+.segmented,
+.stat-icon,
+.chiplet,
+.reset,
+.pace-rows div,
+.origin-row,
+.kv,
+.sheet-button,
+.chip-mute {
+  -webkit-backdrop-filter: var(--inset-filter);
+  backdrop-filter: var(--inset-filter);
 }
 
 /* --- focus ---------------------------------------------------------------- */
@@ -259,14 +178,13 @@ h1, h2, h3, p { margin: 0; }
   top: 0;
   z-index: 20;
   height: var(--titlebar-h);
-  background-image: var(--glass-sheen), var(--glass-body);
-  -webkit-backdrop-filter: var(--glass-filter);
-  backdrop-filter: var(--glass-filter);
+  background: linear-gradient(180deg, rgba(250, 252, 255, .76), rgba(245, 248, 253, .52));
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
   box-shadow:
-    inset 0 -1px 0 var(--hairline),
-    inset 0 1.5px 0 -0.5px var(--glass-crown),
-    inset 0 -3px 6px -4px var(--glass-lip-shade),
-    0 10px 28px -18px rgba(var(--shadow-color), .40);
+    inset 0 1px 0 rgba(255, 255, 255, .76),
+    inset 0 -1px 0 rgba(43, 52, 70, .10),
+    0 10px 30px -22px rgba(var(--shadow-color), .28);
 }
 
 .titlebar-inner {
@@ -318,7 +236,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 0 12px;
   border-radius: 999px;
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
   color: var(--ink-2);
   font-size: 11.5px;
 }
@@ -357,7 +275,7 @@ h1, h2, h3, p { margin: 0; }
   border: 0;
   border-radius: 10px;
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
   color: var(--ink-2);
   cursor: pointer;
   /* The rebound springs; the press itself does not — see :active below. */
@@ -368,7 +286,7 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .ghost-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.ghost-button:hover { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 12%, var(--inset-fill)); transform: scale(1.06); }
+.ghost-button:hover { color: var(--accent-ink); background: var(--inset-fill-hover); transform: scale(1.06); }
 .ghost-button:active {
   transform: scale(.86);
   transition-duration: var(--dur-press);
@@ -394,11 +312,9 @@ h1, h2, h3, p { margin: 0; }
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 13px;
+  border-radius: 14px;
   background: var(--inset-fill);
-  -webkit-backdrop-filter: blur(18px) saturate(170%);
-  backdrop-filter: blur(18px) saturate(170%);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 
 /* The selection is a single physical thumb that slides between segments rather
@@ -410,13 +326,13 @@ h1, h2, h3, p { margin: 0; }
   left: 0;
   bottom: 3px;
   width: var(--thumb-w, 0);
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .78));
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .97), rgba(255, 255, 255, .80));
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, .92),
     inset 0 1px 0 -0.5px #fff,
-    0 1px 2px rgba(var(--shadow-color), .10),
-    0 5px 12px -5px rgba(var(--shadow-color), .18);
+    0 1px 2px rgba(var(--shadow-color), .08),
+    0 4px 10px -5px rgba(var(--shadow-color), .14);
   transform: translate3d(var(--thumb-x, 0), 0, 0);
   transition:
     transform var(--dur-smooth) var(--ease-spring),
@@ -492,6 +408,7 @@ h1, h2, h3, p { margin: 0; }
   font: 620 clamp(28px, 2.9vw, 38px)/1 var(--font-display);
   letter-spacing: -.035em;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .55);
 }
 
 .stat-sub { margin-top: 9px; color: var(--ink-3); font-size: 11.5px; }
@@ -508,7 +425,7 @@ h1, h2, h3, p { margin: 0; }
   height: 34px;
   border-radius: 11px;
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 
 .stat-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -539,7 +456,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 8px 9px;
   border-radius: var(--radius-sm);
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 
 .chiplet span {
@@ -593,7 +510,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 9px 11px;
   border-radius: var(--radius-sm);
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 .reset-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .reset-line span { color: var(--ink-4); font-size: 9.5px; font-weight: 580; text-transform: uppercase; letter-spacing: .06em; }
@@ -698,12 +615,9 @@ h1, h2, h3, p { margin: 0; }
   display: grid;
   gap: 1px;
   padding: 7px 10px;
-  border-radius: 12px;
-  /* Small enough that the full pane bevel reads as heavy, so it takes a lighter
-     edge and a tighter shadow than .glass gives it. */
+  border-radius: 13px;
+  /* The compact tip takes a tighter shadow than a full data panel. */
   box-shadow:
-    inset 0 0 0 1px var(--hairline),
-    inset 0 1px 0 -0.5px var(--glass-crown),
     0 2px 6px -2px rgba(18, 22, 40, .12),
     0 14px 30px -12px rgba(18, 22, 40, .24);
   opacity: 0;
@@ -812,7 +726,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 7px 10px;
   border-radius: var(--radius-sm);
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 .pace-rows span { color: var(--ink-3); font-size: 11px; }
 .pace-rows strong { color: var(--ink); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -835,7 +749,7 @@ h1, h2, h3, p { margin: 0; }
 .chip-mute {
   color: var(--ink-3);
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 
 /* --- session origins ---------------------------------------------------- */
@@ -869,7 +783,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 5px 10px;
   border-radius: 999px;
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
 }
 .origin-name { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink-2); font-size: 11px; }
 .origin-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 560; }
@@ -1025,7 +939,7 @@ h1, h2, h3, p { margin: 0; }
   width: min(374px, calc(100% - 24px));
   padding: 20px;
   overflow-y: auto;
-  border-radius: 22px;
+  border-radius: 24px;
   /* A neutral veil under the glass layers keeps the sheet an even tone instead of
      inheriting whichever wash gradient happens to sit behind it. */
   background-color: color-mix(in srgb, var(--canvas) 58%, transparent);
@@ -1056,7 +970,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 1px 5px;
   border-radius: 5px;
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
   color: var(--accent-ink);
   font-size: 10.5px;
 }
@@ -1069,7 +983,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 9px 11px;
   border-radius: var(--radius-sm);
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
   color: var(--ink-3);
   font-size: 11px;
 }
@@ -1086,7 +1000,7 @@ h1, h2, h3, p { margin: 0; }
   border: 0;
   border-radius: var(--radius-md);
   background: var(--inset-fill);
-  box-shadow: inset 0 0 0 1px var(--inset-line), inset 0 1px 0 -0.5px rgba(255, 255, 255, .95), inset 0 -2px 4px -3px var(--glass-lip-shade);
+  box-shadow: var(--inset-shadow);
   color: var(--ink-2);
   font-size: 12px;
   text-align: left;
@@ -1097,14 +1011,14 @@ h1, h2, h3, p { margin: 0; }
     transform var(--dur-quick) var(--ease-spring);
 }
 .sheet-button svg { flex: none; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .5; }
-.sheet-button:hover { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 12%, var(--inset-fill)); }
+.sheet-button:hover { color: var(--accent-ink); background: var(--inset-fill-hover); }
 .sheet-button:active {
   transform: scale(.965);
   transition-duration: var(--dur-press);
   transition-timing-function: var(--ease-press);
 }
 .sheet-button.danger { color: var(--rose); }
-.sheet-button.danger:hover { background: color-mix(in srgb, var(--rose) 12%, var(--inset-fill)); color: var(--rose); }
+.sheet-button.danger:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--rose) 14%, #fff), color-mix(in srgb, var(--rose) 10%, rgba(255, 255, 255, .5))); color: var(--rose); }
 
 .drawer-foot { margin-top: 18px; color: var(--ink-4); font-size: 10px; line-height: 1.5; }
 
@@ -1138,7 +1052,6 @@ h1, h2, h3, p { margin: 0; }
   /* Zeroing durations alone would still let things jump between scales, which is
      the very thing this preference asks us not to do. Drop the displacement too
      and keep only the colour and opacity changes. */
-  .card:hover,
   .ghost-button:hover,
   .ghost-button:active,
   .sheet-button:active,
