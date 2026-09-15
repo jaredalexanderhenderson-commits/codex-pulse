@@ -88,11 +88,11 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: var(--canvas);
   background-image:
-    radial-gradient(960px 780px at -4% -16%, rgba(48, 92, 252, .80), transparent 58%),
-    radial-gradient(820px 700px at 104% 2%, rgba(0, 214, 198, .66), transparent 54%),
-    radial-gradient(780px 720px at 4% 106%, rgba(255, 118, 88, .58), transparent 54%),
-    radial-gradient(880px 780px at 100% 98%, rgba(140, 98, 255, .68), transparent 56%),
-    radial-gradient(1140px 840px at 54% 48%, rgba(86, 124, 255, .30), transparent 66%);
+    radial-gradient(960px 780px at -4% -16%, rgba(42, 78, 255, .92), transparent 58%),
+    radial-gradient(820px 700px at 104% 2%, rgba(0, 222, 202, .80), transparent 54%),
+    radial-gradient(780px 720px at 4% 106%, rgba(255, 103, 73, .72), transparent 54%),
+    radial-gradient(880px 780px at 100% 98%, rgba(126, 82, 255, .82), transparent 56%),
+    radial-gradient(1140px 840px at 54% 48%, rgba(75, 115, 255, .40), transparent 66%);
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
